@@ -1,0 +1,662 @@
+"use client";
+
+import * as React from "react";
+import Image from "next/image";
+import Link from "next/link";
+import {
+  BadgeCheck,
+  Check,
+  Minus,
+  MessageSquare,
+  Plus,
+  RotateCcw,
+  ShieldCheck,
+  Star,
+  ThumbsUp,
+  Truck,
+} from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { formatMoney } from "@/lib/format";
+import type { LandingProduct, ProductReview } from "@/features/landing/types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { sendTrack } from "@/features/analytics/tracker";
+
+interface ProductLandingProps {
+  product: LandingProduct;
+  checkoutSlug: string;
+  branding: {
+    storeName: string;
+    logoUrl: string | null;
+    supportEmail: string | null;
+  };
+}
+
+function initialsOf(name: string): string {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function formatReviewDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  const formatted = new Intl.DateTimeFormat("pt-PT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(d);
+  return formatted;
+}
+
+function StarRow({ value, className }: { value: number; className?: string }) {
+  return (
+    <span className={cn("flex text-amber-500", className)}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          className={cn(
+            "size-4",
+            i < Math.round(value) ? "fill-current" : "opacity-25",
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+
+function ReviewCard({ review }: { review: ProductReview }) {
+  return (
+    <article className="border-b px-5 py-5 last:border-0">
+      <div className="flex items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pink-100 text-xs font-bold text-pink-600">
+          {initialsOf(review.name)}
+        </span>
+        <div className="min-w-0">
+          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+            {review.name}
+            {review.verifiedPurchase && (
+              <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                <BadgeCheck className="size-3.5" /> Compra verificada
+              </span>
+            )}
+          </p>
+          <p className="text-xs text-zinc-500">
+            {review.location} · {formatReviewDate(review.date)}
+          </p>
+        </div>
+      </div>
+      <p className="mt-3 flex items-center gap-2">
+        <StarRow value={review.stars} />
+        <span className="text-sm font-bold">{review.title}</span>
+      </p>
+      <p className="mt-1.5 text-sm leading-relaxed text-zinc-700">
+        {review.text}
+      </p>
+      {review.photo && (
+        <Image
+          src={review.photo}
+          alt={`Foto enviada por ${review.name}`}
+          width={80}
+          height={80}
+          className="mt-3 size-20 rounded-lg border object-cover"
+        />
+      )}
+      <button
+        type="button"
+        className="mt-3 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs text-zinc-600 transition-colors hover:bg-zinc-50"
+      >
+        <ThumbsUp className="size-3.5" /> Útil ({review.helpful})
+      </button>
+    </article>
+  );
+}
+
+function ReviewsSection({ product }: { product: LandingProduct }) {
+  const reviews = product.reviews;
+  const count = reviews.length;
+
+  if (count === 0) {
+    return (
+      <section className="mt-12">
+        <h2 className="text-xl font-bold tracking-tight">
+          Avaliações dos clientes
+        </h2>
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-2xl border border-dashed p-10 text-center">
+          <div className="flex size-12 items-center justify-center rounded-full bg-violet-50 text-violet-600">
+            <MessageSquare className="size-6" />
+          </div>
+          <p className="font-semibold">Ainda sem avaliações</p>
+          <p className="max-w-md text-sm text-zinc-500">
+            Este produto é novo na loja. As avaliações de clientes reais
+            aparecerão aqui após as primeiras compras.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  const average = reviews.reduce((sum, r) => sum + r.stars, 0) / count;
+  const distribution = [5, 4, 3, 2, 1].map((stars) => {
+    const n = reviews.filter((r) => Math.round(r.stars) === stars).length;
+    return { stars, percent: Math.round((n / count) * 100) };
+  });
+
+  return (
+    <section className="mt-12">
+      <h2 className="text-xl font-bold tracking-tight">
+        Avaliações dos clientes
+      </h2>
+      <div className="mt-4 grid gap-0 overflow-hidden rounded-2xl border md:grid-cols-[260px_1fr]">
+        {/* Resumo */}
+        <div className="border-b p-6 md:border-r md:border-b-0">
+          <p className="text-4xl font-black">
+            {average.toLocaleString("pt-PT", {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            })}
+            <span className="text-lg font-semibold text-zinc-400"> /5</span>
+          </p>
+          <StarRow value={average} className="mt-1" />
+          <p className="mt-2 text-sm text-zinc-500">
+            Baseado em <strong>{count}</strong>{" "}
+            {count === 1 ? "avaliação" : "avaliações"}
+          </p>
+          <div className="mt-4 space-y-1.5">
+            {distribution.map(({ stars, percent }) => (
+              <div key={stars} className="flex items-center gap-2 text-xs">
+                <span className="w-6 text-zinc-500">{stars}★</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-100">
+                  <div
+                    className="h-full rounded-full bg-amber-400"
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+                <span className="w-8 text-right text-zinc-500">{percent}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Lista */}
+        <div>
+          {reviews.map((review, i) => (
+            <ReviewCard key={review.name + i} review={review} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function ProductLanding({
+  product,
+  checkoutSlug,
+  branding,
+}: ProductLandingProps) {
+  const [activeImage, setActiveImage] = React.useState(0);
+  const [quantity, setQuantity] = React.useState(1);
+  const [tab, setTab] = React.useState<"descricao" | "envios">("descricao");
+
+  const discountPercent = product.compareAtPriceCents
+    ? Math.round((1 - product.priceCents / product.compareAtPriceCents) * 100)
+    : null;
+
+  const savings = product.compareAtPriceCents
+    ? product.compareAtPriceCents - product.priceCents
+    : null;
+
+  const fmt = (cents: number) => formatMoney(cents, product.currency, "pt-PT");
+
+  return (
+    <div className="min-h-svh bg-white text-zinc-900">
+      {/* Cabeçalho — a logo (ou nome da loja) fica sempre centralizada. */}
+      <header className="bg-zinc-950 py-6 md:py-7">
+        <div className="mx-auto flex max-w-6xl items-center justify-center px-4">
+          <Link href={`/p/${product.slug}`} className="flex items-center">
+            {branding.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={branding.logoUrl}
+                alt={branding.storeName}
+                className="h-10 max-w-[220px] object-contain md:h-12"
+              />
+            ) : (
+              <span className="text-xl font-black tracking-tight text-white">
+                {branding.storeName}
+              </span>
+            )}
+          </Link>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-8 md:py-12">
+        <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+          {/* Galeria */}
+          <div>
+            <div className="relative overflow-hidden rounded-2xl border bg-zinc-50">
+              {discountPercent !== null && (
+                <span className="absolute top-4 left-4 z-10 rounded-full bg-red-600 px-3 py-1 text-sm font-bold text-white">
+                  -{discountPercent}%
+                </span>
+              )}
+              <Image
+                src={product.gallery[activeImage] ?? product.mainImage}
+                alt={product.name}
+                width={720}
+                height={720}
+                priority
+                className="aspect-square w-full object-contain"
+              />
+            </div>
+            <div className="mt-3 flex gap-2">
+              {product.gallery.map((src, i) => (
+                <button
+                  key={src + i}
+                  type="button"
+                  onClick={() => setActiveImage(i)}
+                  aria-label={`Imagem ${i + 1}`}
+                  className={cn(
+                    "overflow-hidden rounded-lg border-2 bg-zinc-50 transition-colors",
+                    i === activeImage
+                      ? "border-violet-500"
+                      : "border-transparent hover:border-zinc-300",
+                  )}
+                >
+                  <Image
+                    src={src}
+                    alt=""
+                    width={72}
+                    height={72}
+                    className="aspect-square size-16 object-contain"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Informações e compra */}
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              {product.name}
+            </h1>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              {product.rating ? (
+                <span className="flex items-center gap-1">
+                  <span className="flex text-amber-500">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={cn(
+                          "size-4",
+                          i < Math.round(product.rating!.value)
+                            ? "fill-current"
+                            : "opacity-30",
+                        )}
+                      />
+                    ))}
+                  </span>
+                  <strong>
+                    {product.rating.value.toLocaleString("pt-PT")}
+                  </strong>
+                  <span className="text-zinc-500">
+                    · {product.rating.count} avaliações
+                  </span>
+                </span>
+              ) : (
+                <Badge className="bg-violet-100 text-violet-700">
+                  Novidade na loja
+                </Badge>
+              )}
+              <span className="flex items-center gap-1 font-medium text-emerald-600">
+                <Check className="size-4" /> Em stock
+              </span>
+            </div>
+
+            {/* Preço */}
+            <div className="mt-5">
+              <div className="flex flex-wrap items-baseline gap-3">
+                <span className="text-4xl font-black tracking-tight">
+                  {fmt(product.priceCents)}
+                </span>
+                {product.compareAtPriceCents && (
+                  <>
+                    <span className="text-lg text-zinc-400 line-through">
+                      {fmt(product.compareAtPriceCents)}
+                    </span>
+                    {discountPercent !== null && (
+                      <span className="rounded bg-red-100 px-2 py-0.5 text-sm font-bold text-red-600">
+                        -{discountPercent}%
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+              {savings !== null && savings > 0 && (
+                <p className="mt-1 font-semibold text-emerald-600">
+                  Está a poupar {fmt(savings)}!
+                </p>
+              )}
+              <p className="text-sm text-zinc-500">Preço com IVA incluído</p>
+            </div>
+
+            {/* Métodos de pagamento */}
+            <div className="mt-5 rounded-xl border bg-zinc-50 p-4">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <ShieldCheck className="size-4 text-emerald-600" />
+                Métodos de pagamento disponíveis
+              </p>
+              <div className="mt-3 flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/landing/mbway.svg"
+                  alt="MB WAY"
+                  className="h-9 rounded border bg-white px-2 py-1"
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/landing/multibanco.svg"
+                  alt="Multibanco"
+                  className="h-9 rounded border bg-white px-2 py-1"
+                />
+              </div>
+            </div>
+
+            {/* Estoque */}
+            {product.stockRemaining !== null && (
+              <div className="mt-5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-1.5 font-semibold text-red-600">
+                    <span className="size-2 animate-pulse rounded-full bg-red-600" />
+                    Disponibilidade em stock
+                  </span>
+                  <span className="text-zinc-500">
+                    {product.stockRemaining} restantes
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100">
+                  <div
+                    className="h-full rounded-full bg-red-500"
+                    style={{
+                      width: `${Math.max(4, Math.round((product.stockRemaining / product.stockTotal) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Quantidade + CTA */}
+            <div className="mt-6 flex gap-3">
+              <div className="flex items-center rounded-lg border">
+                <button
+                  type="button"
+                  aria-label="Diminuir quantidade"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="flex size-11 items-center justify-center text-zinc-600 hover:bg-zinc-50"
+                >
+                  <Minus className="size-4" />
+                </button>
+                <span className="w-8 text-center font-semibold">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Aumentar quantidade"
+                  onClick={() => setQuantity((q) => q + 1)}
+                  className="flex size-11 items-center justify-center text-zinc-600 hover:bg-zinc-50"
+                >
+                  <Plus className="size-4" />
+                </button>
+              </div>
+              <Button
+                asChild
+                size="lg"
+                className="h-11 flex-1 bg-orange-500 text-base font-bold hover:bg-orange-600"
+              >
+                <Link
+                  href={`/checkout/${checkoutSlug}?qty=${quantity}`}
+                  onClick={() =>
+                    sendTrack("click_buy", {
+                      productSlug: product.slug,
+                      valueCents: product.priceCents * quantity,
+                      currency: product.currency,
+                    })
+                  }
+                >
+                  Comprar já
+                </Link>
+              </Button>
+            </div>
+
+            {/* Garantias */}
+            <ul className="mt-6 space-y-2.5 text-sm">
+              <li className="flex items-center gap-2 text-zinc-700">
+                <Truck className="size-4 shrink-0 text-emerald-600" />
+                Prazo estimado de entrega: {product.deliveryEstimate}
+              </li>
+              <li className="flex items-center gap-2 text-zinc-700">
+                <RotateCcw className="size-4 shrink-0 text-emerald-600" />
+                Prazo informado para devolução: {product.returnDays} dias
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Abas: descrição / envios */}
+        <div className="mt-12">
+          <div className="flex gap-6 border-b">
+            <button
+              type="button"
+              onClick={() => setTab("descricao")}
+              className={cn(
+                "border-b-2 pb-3 text-sm font-semibold transition-colors",
+                tab === "descricao"
+                  ? "border-violet-500 text-violet-600"
+                  : "border-transparent text-zinc-500 hover:text-zinc-800",
+              )}
+            >
+              Descrição
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("envios")}
+              className={cn(
+                "border-b-2 pb-3 text-sm font-semibold transition-colors",
+                tab === "envios"
+                  ? "border-violet-500 text-violet-600"
+                  : "border-transparent text-zinc-500 hover:text-zinc-800",
+              )}
+            >
+              Envios &amp; Devoluções
+            </button>
+          </div>
+
+          {tab === "descricao" ? (
+            <div className="py-6">
+              <div className="mx-auto max-w-3xl rounded-2xl border bg-white p-6 shadow-sm sm:p-10">
+                <h2 className="text-2xl font-bold text-zinc-900">
+                  Sobre este produto
+                </h2>
+                {product.shortPitch && (
+                  <p className="mt-2 font-semibold text-zinc-700">
+                    {product.shortPitch}
+                  </p>
+                )}
+                <div className="mt-4 space-y-4 text-zinc-700">
+                  {product.description.map((p, i) => (
+                    <p key={i} className="leading-relaxed">
+                      {p}
+                    </p>
+                  ))}
+                </div>
+                {product.highlights.length > 0 && (
+                  <ul className="grid gap-2 pt-6 sm:grid-cols-2">
+                    {product.highlights.map((h) => (
+                      <li key={h} className="flex items-center gap-2 text-sm">
+                        <Check className="size-4 shrink-0 text-emerald-600" />
+                        {h}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {product.specs.length > 0 && (
+                  <dl className="mt-8 grid gap-x-6 gap-y-4 border-t pt-6 sm:grid-cols-2 lg:grid-cols-4">
+                    {product.specs.map(([k, v]) => (
+                      <div key={k}>
+                        <dt className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                          {k}
+                        </dt>
+                        <dd className="mt-0.5 font-bold text-zinc-900">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="max-w-2xl space-y-4 py-6 text-sm leading-relaxed text-zinc-700">
+              {product.shippingReturns.length > 0 ? (
+                product.shippingReturns.map((p, i) => <p key={i}>{p}</p>)
+              ) : (
+                <>
+                  <p>
+                    <strong>Envios:</strong> prazo estimado informado para este
+                    produto: {product.deliveryEstimate}. Consulte a política de
+                    envios para conhecer as condições aplicáveis.
+                  </p>
+                  <p>
+                    <strong>Devoluções:</strong> o prazo configurado para este
+                    produto é de {product.returnDays} dias. Consulte a política
+                    de devoluções antes de comprar.
+                  </p>
+                </>
+              )}
+              {branding.supportEmail && (
+                <p>
+                  <strong>Apoio ao cliente:</strong>{" "}
+                  <a
+                    href={`mailto:${branding.supportEmail}`}
+                    className="text-violet-600 underline"
+                  >
+                    {branding.supportEmail}
+                  </a>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Avaliações dos clientes */}
+        <ReviewsSection product={product} />
+      </main>
+
+      {/* Rodapé */}
+      <footer className="mt-10 bg-zinc-950 text-sm text-zinc-400">
+        <div className="mx-auto max-w-6xl px-4">
+          {/* Colunas */}
+          <div className="grid gap-8 border-b border-zinc-800 py-10 sm:grid-cols-3">
+            <div>
+              <p className="text-lg font-black tracking-tight text-white">
+                {branding.storeName}
+              </p>
+              <p className="mt-3 max-w-xs text-xs leading-relaxed">
+                Consulte os detalhes do produto e as políticas do vendedor antes
+                de concluir a compra.
+              </p>
+              <div className="mt-4 flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/landing/mbway.svg"
+                  alt="MB WAY"
+                  className="h-7 rounded bg-white px-1.5 py-0.5"
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/landing/multibanco.svg"
+                  alt="Multibanco"
+                  className="h-7 rounded bg-white px-1.5 py-0.5"
+                />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold tracking-wider text-white uppercase">
+                Apoio ao Cliente
+              </p>
+              <ul className="mt-3 space-y-2 text-xs">
+                {branding.supportEmail && (
+                  <li>
+                    <a
+                      href={`mailto:${branding.supportEmail}`}
+                      className="transition-colors hover:text-white"
+                    >
+                      Contactos
+                    </a>
+                  </li>
+                )}
+                {[
+                  { label: "Envios e Entregas", href: "/legal/envios" },
+                  { label: "Trocas e Devoluções", href: "/legal/devolucoes" },
+                ].map((l) => (
+                  <li key={l.href}>
+                    <Link
+                      href={l.href}
+                      className="transition-colors hover:text-white"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold tracking-wider text-white uppercase">
+                Informações Legais
+              </p>
+              <ul className="mt-3 space-y-2 text-xs">
+                {[
+                  { label: "Termos e Condições", href: "/legal/termos" },
+                  {
+                    label: "Política de Privacidade",
+                    href: "/legal/privacidade",
+                  },
+                  { label: "Política de Cookies", href: "/legal/cookies" },
+                ].map((l) => (
+                  <li key={l.href}>
+                    <Link
+                      href={l.href}
+                      className="transition-colors hover:text-white"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+                <li>
+                  <a
+                    href="https://www.livroreclamacoes.pt/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="transition-colors hover:text-white"
+                  >
+                    Livro de Reclamações
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Linha final */}
+          <div className="border-t border-zinc-800 py-5 text-center text-xs text-zinc-500">
+            © {new Date().getFullYear()} {branding.storeName}. Todos os direitos
+            reservados.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
