@@ -1,0 +1,174 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785226953476,
+      "tag": "0000_burly_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785293491465,
+      "tag": "0001_abnormal_chamber",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785310526398,
+      "tag": "0002_aromatic_war_machine",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785312136667,
+      "tag": "0003_slow_wild_child",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785464490609,
+      "tag": "0004_fuzzy_reaper",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785474424754,
+      "tag": "0005_broad_leopardon",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785482445032,
+      "tag": "0006_yielding_dust",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785555073742,
+      "tag": "0007_tired_sugar_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785576389318,
+      "tag": "0008_reflective_speed_demon",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785581613441,
+      "tag": "0009_add_orders_last_reminder_sent_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785634922545,
+      "tag": "0010_enable_rls_workspace_branding",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785700000000,
+      "tag": "0011_landing_page_builder",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786100000000,
+      "tag": "0012_product_variations",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786300000000,
+      "tag": "0013_cart_recovery",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786400000000,
+      "tag": "0014_quiet_tempest",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1786400001000,
+      "tag": "0015_colorful_ezekiel",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1786400002000,
+      "tag": "0016_lying_gauntlet",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786767012872,
+      "tag": "0017_reflective_iron_monger",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786812932023,
+      "tag": "0018_mature_speed_demon",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786814397610,
+      "tag": "0019_lame_famine",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787276677542,
+      "tag": "0020_deep_sharon_ventura",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791083517686,
+      "tag": "0021_secure_public_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791084752956,
+      "tag": "0022_sync_integration_schema_metadata",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791085071388,
+      "tag": "0023_quarantine_legacy_sample_store",
+      "breakpoints": true
+    }
+  ]
+}

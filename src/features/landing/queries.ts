@@ -1,0 +1,72 @@
+import { cache } from "react";
+import { and, eq, isNull } from "drizzle-orm";
+
+import { getDb, isDatabaseConfigured } from "@/database/client";
+import { products } from "@/database/schema";
+import type { LandingProduct } from "@/features/landing/types";
+import { isCompanyComplete } from "@/lib/company";
+import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
+
+/**
+ * Busca um produto publicado pelo slug (tabela `products`, campo
+ * `landing_content` com o conteúdo rico da página).
+ *
+ * Envolvida em `cache()`: a mesma requisição chama isto no `generateMetadata`
+ * e ao renderizar a página — assim o banco é consultado uma vez só.
+ */
+export const getProductBySlug = cache(async function getProductBySlug(
+  slug: string,
+): Promise<LandingProduct | null> {
+  if (!isCompanyComplete()) return null;
+
+  if (isDatabaseConfigured()) {
+    try {
+      const db = getDb();
+      const workspaceId = await getOrCreateDefaultWorkspace();
+      const rows = await db
+        .select()
+        .from(products)
+        .where(
+          and(
+            eq(products.workspaceId, workspaceId),
+            eq(products.slug, slug),
+            isNull(products.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      const row = rows[0];
+      if (row && row.status === "active") {
+        const content = (row.landingContent ?? {}) as Partial<LandingProduct>;
+        return {
+          id: row.id,
+          slug: row.slug,
+          name: row.name,
+          brand: content.brand ?? "",
+          shortPitch: row.shortDescription ?? content.shortPitch ?? "",
+          priceCents: row.priceCents,
+          compareAtPriceCents: content.compareAtPriceCents ?? null,
+          currency: row.currency,
+          mainImage: row.mainImageUrl ?? content.mainImage ?? "",
+          gallery:
+            content.gallery ?? (row.mainImageUrl ? [row.mainImageUrl] : []),
+          rating: content.rating ?? null,
+          stockRemaining: row.trackInventory ? row.stockQuantity : null,
+          stockTotal: content.stockTotal ?? row.stockQuantity,
+          freeShippingFromCents: content.freeShippingFromCents ?? 0,
+          deliveryEstimate: content.deliveryEstimate ?? "2–4 dias úteis",
+          returnDays: content.returnDays ?? 14,
+          description: content.description ?? [],
+          shippingReturns: content.shippingReturns ?? [],
+          highlights: content.highlights ?? [],
+          specs: content.specs ?? [],
+          reviews: content.reviews ?? [],
+        };
+      }
+    } catch (error) {
+      console.error("[landing] erro ao buscar produto do banco:", error);
+    }
+  }
+
+  return null;
+});
