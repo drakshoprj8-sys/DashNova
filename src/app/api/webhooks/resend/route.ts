@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/database/client";
 import {
@@ -13,6 +13,7 @@ import {
   verifyResendWebhook,
 } from "@/features/emails/resend-provider";
 import { suppressionReasonForResendEvent } from "@/features/emails/suppression";
+import { deliveryStatesToPreserve } from "@/features/emails/delivery-status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ const EVENT_TYPE = {
 
 const STATUS_BY_EVENT: Record<string, string> = {
   "email.scheduled": "queued",
-  "email.delivery_delayed": "queued",
+  "email.delivery_delayed": "delivery_delayed",
   "email.sent": "sent",
   "email.delivered": "delivered",
   "email.opened": "opened",
@@ -39,30 +40,6 @@ const STATUS_BY_EVENT: Record<string, string> = {
   "email.failed": "failed",
   "email.suppressed": "suppressed",
 };
-
-const STATUS_RANK: Record<string, number> = {
-  pending: 0,
-  queued: 1,
-  sent: 2,
-  delivered: 3,
-  opened: 4,
-  clicked: 5,
-};
-
-const TERMINAL_STATUSES = new Set([
-  "failed",
-  "bounced",
-  "complained",
-  "suppressed",
-]);
-
-function transitionStatus(current: string, next: string): string {
-  if (TERMINAL_STATUSES.has(current)) return current;
-  if (TERMINAL_STATUSES.has(next)) return next;
-  return (STATUS_RANK[next] ?? 0) >= (STATUS_RANK[current] ?? 0)
-    ? next
-    : current;
-}
 
 function eventMetadata(event: { type: string; data: Record<string, unknown> }) {
   const metadata: Record<string, unknown> = { providerType: event.type };
@@ -134,10 +111,9 @@ export async function POST(request: NextRequest) {
       await db
         .update(emailRecipients)
         .set({
-          status: transitionStatus(recipient.status, next),
-          sentAt:
-            recipient.sentAt ??
-            (event.type === "email.sent" ? new Date(event.created_at) : null),
+          // Evaluate against the current row, even when webhooks arrive concurrently.
+          status: sql`case when ${inArray(emailRecipients.status, deliveryStatesToPreserve(next))} then ${emailRecipients.status} else ${next} end`,
+          sentAt: sql`coalesce(${emailRecipients.sentAt}, ${event.type === "email.sent" ? new Date(event.created_at) : null})`,
           updatedAt: new Date(),
         })
         .where(eq(emailRecipients.id, recipient.id));

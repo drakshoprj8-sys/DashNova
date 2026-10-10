@@ -69,29 +69,24 @@ describe("email campaign template", () => {
     expect(html).not.toContain("<img");
   });
 
-  it("identifies PCCGVIP without inventing a purchase or payment link", () => {
+  it("uses the saved neutral campaign defaults", () => {
     const html = buildCampaignHtml({
       body: DEFAULT_CAMPAIGN_TEMPLATE.body,
-      headerName: DEFAULT_CAMPAIGN_TEMPLATE.headerName,
-      ctaUrl: DEFAULT_CAMPAIGN_TEMPLATE.ctaUrl,
-      vars: { ...vars, pedido: "o seu pedido", checkoutUrl: "" },
+      vars,
     });
 
-    expect(html).toContain("Informações do pedido na PCCGVIP");
-    expect(html).toContain("Se não reconhece a PCCGVIP");
-    expect(html).not.toContain("<strong>Encomenda:</strong>");
-    expect(html).not.toContain("href=");
-    expect(html).not.toContain("Continuar para o Pagamento");
-  });
-
-  it("omits missing product data and uses the actual product by default", () => {
-    const input = { body: DEFAULT_CAMPAIGN_TEMPLATE.body, vars };
-    expect(buildCampaignHtml(input)).toContain(
-      "<strong>Artigo:</strong> Curso &lt;Avançado&gt;",
+    expect(html).toContain(
+      "Esta mensagem apresenta os dados registados no seu pedido PED-42.",
     );
-    expect(
-      buildCampaignHtml({ ...input, vars: { ...vars, produto: "" } }),
-    ).not.toContain("<strong>Artigo:</strong>");
+    expect(html).toContain(
+      "Se não reconhece a PCCGVIP ou este pedido, desconsidere esta mensagem.",
+    );
+    expect(html).toContain("<strong>Artigo:</strong> Curso &lt;Avançado&gt;");
+    expect(html).toContain("Ver pedido");
+    expect(html).toContain(
+      "Se o botão não funcionar, copie o endereço abaixo no navegador.",
+    );
+    expect(html).toContain('href="https://example.com/checkout/PED-42"');
   });
 
   it("accepts a dynamic checkout link and rejects unsafe protocols", () => {

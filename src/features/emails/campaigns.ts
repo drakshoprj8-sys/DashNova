@@ -12,6 +12,11 @@ import { getAppUrl } from "@/lib/app-url";
 import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 import { STORE_NOTICE_KIND, buildStoreNoticeHtml } from "./store-notice";
 import {
+  SENT_STATUSES,
+  DELIVERED_STATUSES,
+  AWAITING_DELIVERY_STATUSES,
+} from "./delivery-status";
+import {
   STORE_NOTICE_LINK_KIND,
   buildStoreNoticeLinkHtml,
 } from "./store-notice-link";
@@ -25,13 +30,14 @@ import {
   buildStoreNoticeOfferHtml,
 } from "./store-notice-offer";
 
-const SENT_STATUSES = ["sent", "delivered", "opened", "clicked"];
 const FAILED_STATUSES = ["failed", "bounced", "complained", "suppressed"];
 const QUEUED_STATUSES = ["pending", "queued"];
 
 export interface EmailDashboardStats {
   total: number;
   sent: number;
+  delivered: number;
+  awaitingDelivery: number;
   failed: number;
   queued: number;
 }
@@ -90,7 +96,14 @@ function previewVars(appUrl: string): CampaignTemplateVars {
 
 export async function getEmailDashboardOverview(): Promise<EmailDashboardOverview> {
   const empty = {
-    stats: { total: 0, sent: 0, failed: 0, queued: 0 },
+    stats: {
+      total: 0,
+      sent: 0,
+      delivered: 0,
+      awaitingDelivery: 0,
+      failed: 0,
+      queued: 0,
+    },
     history: [],
   } satisfies EmailDashboardOverview;
   if (!isDatabaseConfigured()) return empty;
@@ -103,6 +116,8 @@ export async function getEmailDashboardOverview(): Promise<EmailDashboardOvervie
       .select({
         total: sql<number>`count(${emailRecipients.id})::int`,
         sent: countFor(SENT_STATUSES),
+        delivered: countFor(DELIVERED_STATUSES),
+        awaitingDelivery: countFor(AWAITING_DELIVERY_STATUSES),
         failed: countFor(FAILED_STATUSES),
         queued: countFor(QUEUED_STATUSES),
       })
@@ -120,6 +135,8 @@ export async function getEmailDashboardOverview(): Promise<EmailDashboardOvervie
         sentAt: emailCampaigns.sentAt,
         total: sql<number>`count(${emailRecipients.id})::int`,
         sent: countFor(SENT_STATUSES),
+        delivered: countFor(DELIVERED_STATUSES),
+        awaitingDelivery: countFor(AWAITING_DELIVERY_STATUSES),
         failed: countFor(FAILED_STATUSES),
         queued: countFor(QUEUED_STATUSES),
       })
@@ -151,6 +168,8 @@ export async function getEmailDashboardOverview(): Promise<EmailDashboardOvervie
     stats: {
       total: stats.total ?? 0,
       sent: stats.sent ?? 0,
+      delivered: stats.delivered ?? 0,
+      awaitingDelivery: stats.awaitingDelivery ?? 0,
       failed: stats.failed ?? 0,
       queued: stats.queued ?? 0,
     },
@@ -200,6 +219,8 @@ export async function getEmailDashboardOverview(): Promise<EmailDashboardOvervie
         sentAt: row.sentAt?.toISOString() ?? null,
         total: row.total ?? 0,
         sent: row.sent ?? 0,
+        delivered: row.delivered ?? 0,
+        awaitingDelivery: row.awaitingDelivery ?? 0,
         failed: row.failed ?? 0,
         queued: row.queued ?? 0,
       };
@@ -213,6 +234,8 @@ export async function refreshCampaignStats(campaignId: string) {
     .select({
       total: sql<number>`count(${emailRecipients.id})::int`,
       sent: countFor(SENT_STATUSES),
+      delivered: countFor(DELIVERED_STATUSES),
+      awaitingDelivery: countFor(AWAITING_DELIVERY_STATUSES),
       failed: countFor(FAILED_STATUSES),
       queued: countFor(QUEUED_STATUSES),
     })
@@ -222,6 +245,8 @@ export async function refreshCampaignStats(campaignId: string) {
   const stats: EmailDashboardStats = {
     total: row?.total ?? 0,
     sent: row?.sent ?? 0,
+    delivered: row?.delivered ?? 0,
+    awaitingDelivery: row?.awaitingDelivery ?? 0,
     failed: row?.failed ?? 0,
     queued: row?.queued ?? 0,
   };

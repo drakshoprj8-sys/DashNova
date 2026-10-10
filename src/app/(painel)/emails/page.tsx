@@ -87,7 +87,10 @@ export default async function EmailsPage({
     getSegmentCounts(),
     getConsolidatedCustomerCounts(),
     customerIds.length > 0
-      ? getCustomRecipients(customerIds, initialSegment === "pending" ? ["awaiting_payment"] : undefined)
+      ? getCustomRecipients(
+          customerIds,
+          initialSegment === "pending" ? ["awaiting_payment"] : undefined,
+        )
       : Promise.resolve(null),
     getEmailDashboardOverview(),
     getSegmentRecipients("pending").then((recipients) =>
@@ -97,7 +100,17 @@ export default async function EmailsPage({
   const resendReady = isResendConfigured();
   const summary = [
     { label: "Total", value: overview.stats.total, icon: Send },
-    { label: "Enviados", value: overview.stats.sent, icon: MailCheck },
+    { label: "Aceitos pelo Resend", value: overview.stats.sent, icon: Send },
+    {
+      label: "Entrega confirmada",
+      value: overview.stats.delivered,
+      icon: MailCheck,
+    },
+    {
+      label: "Aguardando entrega",
+      value: overview.stats.awaitingDelivery,
+      icon: Clock3,
+    },
     { label: "Falhados", value: overview.stats.failed, icon: MailX },
     { label: "Em fila", value: overview.stats.queued, icon: Clock3 },
   ];
@@ -139,7 +152,7 @@ export default async function EmailsPage({
         </Alert>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {summary.map((item) => (
           <Card key={item.label}>
             <CardContent className="flex items-center justify-between p-4">
@@ -156,6 +169,12 @@ export default async function EmailsPage({
           </Card>
         ))}
       </div>
+
+      <p className="text-muted-foreground text-sm">
+        Sent confirma que o Resend aceitou o envio. Delivered confirma que o
+        servidor do destinatário recebeu o e-mail; a mensagem ainda pode ir para
+        spam.
+      </p>
 
       {requestedSource === "clientes" && initialSegment === "paid" && (
         <Alert variant="success">
@@ -191,7 +210,9 @@ export default async function EmailsPage({
         <AlertDescription>
           Clientes bloqueados, descadastrados ou sem consentimento são
           excluídos. Cada disparo usa uma chave única para impedir reenvios
-          duplicados.
+          duplicados. Campanhas exigem consentimento de e-mail, domínio com
+          servidor de correio e intervalo de 24 horas por destinatário. Todos os
+          disparos incluem um link de descadastro.
         </AlertDescription>
       </Alert>
     </div>

@@ -32,6 +32,20 @@ vi.mock("@/features/emails/store-offer-actions", () => ({
   validateStoreOfferAction: mocks.validateStoreOffer,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/features/emails/campaign-eligibility", () => ({
+  eligibleCampaignRecipients: async (
+    _workspace: string,
+    recipients: unknown[],
+  ) => recipients,
+  reserveCampaignRecipients: async (
+    _workspace: string,
+    recipients: unknown[],
+  ) => recipients,
+}));
+vi.mock("@/features/emails/unsubscribe-token", () => ({
+  createUnsubscribeUrl: () =>
+    "https://example.com/api/public/emails/unsubscribe?token=test",
+}));
 vi.mock("@/database/client", () => ({
   getDb: mocks.getDb,
   isDatabaseConfigured: () => true,
@@ -90,14 +104,12 @@ describe("notification server boundary", () => {
   it.each(["all", "paid"])(
     "usa a URL escolhida no teste e no lote do público %s",
     async (segment) => {
-      const values = vi
-        .fn()
-        .mockReturnValue({
-          onConflictDoNothing: () => ({
-            returning: async () => [{ id: "campaign" }],
-          }),
-          onConflictDoUpdate: async () => undefined,
-        });
+      const values = vi.fn().mockReturnValue({
+        onConflictDoNothing: () => ({
+          returning: async () => [{ id: "campaign" }],
+        }),
+        onConflictDoUpdate: async () => undefined,
+      });
       const db = {
         insert: vi.fn().mockReturnValue({ values }),
         update: vi

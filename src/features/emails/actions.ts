@@ -23,6 +23,11 @@ import {
   type Recipient,
 } from "@/features/emails/segments";
 import { splitProviderBatches } from "@/features/emails/batching";
+import {
+  eligibleCampaignRecipients,
+  reserveCampaignRecipients,
+} from "@/features/emails/campaign-eligibility";
+import { createUnsubscribeUrl } from "@/features/emails/unsubscribe-token";
 import { getOrderNotificationValidationError } from "@/features/emails/notification-policy";
 import type { SegmentKey } from "@/features/emails/types";
 import {
@@ -71,7 +76,7 @@ import {
   getStoreNoticeOfferValidationError,
 } from "./store-notice-offer";
 
-const RESEND_BATCH_INTERVAL_MS = 250;
+const RESEND_BATCH_INTERVAL_MS = 600;
 
 const campaignSchema = z.object({
   dispatchId: z.string().uuid(),
@@ -580,6 +585,11 @@ export async function sendCampaignAction(
     const vars = sampleVars(testEmail, appUrl);
     const result = await sendEmail({
       to: testEmail,
+      unsubscribeUrl: createUnsubscribeUrl(
+        appUrl,
+        await getOrCreateDefaultWorkspace(),
+        testEmail,
+      ),
       subject: `[TESTE] ${renderCampaignText(subject, vars)}`,
       html: renderHtml({
         body,
@@ -609,17 +619,24 @@ export async function sendCampaignAction(
     return { ok: false, error: "Banco de dados não configurado." };
   }
 
-  const recipients = await resolveRecipients(
+  const resolvedRecipients = await resolveRecipients(
     segment,
     customerIds,
     appUrl,
     pendingCheckout,
   );
+  const workspaceId = await getOrCreateDefaultWorkspace();
+  const eligible = await eligibleCampaignRecipients(
+    workspaceId,
+    resolvedRecipients,
+    informational,
+  );
+  let recipients = eligible;
   if (recipients.length === 0) {
     return {
       ok: false,
       error: informational
-        ? "Nenhum cliente elegível para comunicados. Verifique os contatos, bloqueios e descadastros na aba Clientes."
+        ? "Nenhum cliente elegível: campanhas exigem consentimento de e-mail, domínio válido e intervalo de 24 horas desde o último disparo. Confira a aba Clientes."
         : pendingCheckout
           ? "Nenhum pedido elegível: é necessário um pedido aguardando pagamento com checkout publicado e pagamento criado no gateway."
           : "Nenhum pedido elegível: é necessário um pedido não importado com pagamento aprovado no gateway de produção e artigo do catálogo.",
@@ -641,7 +658,10 @@ export async function sendCampaignAction(
     };
   }
   try {
-    for (const recipient of recipients) templateVars(recipient, appUrl);
+    for (const recipient of recipients) {
+      templateVars(recipient, appUrl);
+      createUnsubscribeUrl(appUrl, workspaceId, recipient.email);
+    }
   } catch {
     return {
       ok: false,
@@ -649,13 +669,7 @@ export async function sendCampaignAction(
         "Não foi possível criar os links seguros dos pedidos. Verifique ENCRYPTION_KEY e a URL pública.",
     };
   }
-  const providerBatches = splitProviderBatches(
-    recipients,
-    MAX_EMAILS_PER_BATCH,
-  );
-
   const db = getDb();
-  const workspaceId = await getOrCreateDefaultWorkspace();
   const [created] = await db
     .insert(emailCampaigns)
     .values({
@@ -711,6 +725,29 @@ export async function sendCampaignAction(
 
   if (!created) return duplicateCampaignResult(dispatchId);
 
+  recipients = await reserveCampaignRecipients(workspaceId, eligible);
+  if (recipients.length === 0) {
+    await db
+      .update(emailCampaigns)
+      .set({
+        status: "cancelled",
+        stats: { total: 0, sent: 0, failed: 0, queued: 0 },
+        updatedAt: new Date(),
+      })
+      .where(eq(emailCampaigns.id, dispatchId));
+    revalidatePath("/emails");
+    return {
+      ok: false,
+      error:
+        "Os destinatários já foram reservados por outro disparo. Aguarde o intervalo de 24 horas.",
+    };
+  }
+  const skipped = resolvedRecipients.length - recipients.length;
+  const providerBatches = splitProviderBatches(
+    recipients,
+    MAX_EMAILS_PER_BATCH,
+  );
+
   await db.insert(emailRecipients).values(
     recipients.map((recipient) => ({
       workspaceId,
@@ -731,6 +768,11 @@ export async function sendCampaignAction(
         const vars = templateVars(recipient, appUrl);
         return {
           to: recipient.email,
+          unsubscribeUrl: createUnsubscribeUrl(
+            appUrl,
+            workspaceId,
+            recipient.email,
+          ),
           subject: renderCampaignText(subject, vars),
           html: renderHtml({
             body,
@@ -852,7 +894,7 @@ export async function sendCampaignAction(
     queued,
     message:
       failed === 0
-        ? `Disparo colocado na fila do Resend para ${queued} ${queued === 1 ? "cliente" : "clientes"}.`
+        ? `Resend aceitou ${queued} ${queued === 1 ? "e-mail" : "e-mails"}; acompanhe a confirmação de entrega no histórico.${skipped ? ` ${skipped} contatos excluídos por consentimento, domínio ou intervalo de 24 horas.` : ""}`
         : undefined,
     error:
       failed > 0
