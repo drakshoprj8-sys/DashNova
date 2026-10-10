@@ -9,6 +9,8 @@ import {
   emailCampaigns,
   emailEvents,
   emailRecipients,
+  emailFrequencyCaps,
+  emailSuppressions,
   checkouts,
   orders,
   orderItems,
@@ -908,5 +910,36 @@ export async function testResendAction() {
   if (!session || session.demoMode) {
     return { ok: false, message: "Não autenticado." };
   }
-  return testResendConnection();
+  const connection = await testResendConnection();
+  if (!connection.ok) return connection;
+  if (!isDatabaseConfigured())
+    return {
+      ok: false,
+      message: "Banco de dados não configurado para proteger os disparos.",
+    };
+  try {
+    const workspaceId = await getOrCreateDefaultWorkspace();
+    await Promise.all([
+      getDb()
+        .select({ id: emailFrequencyCaps.id })
+        .from(emailFrequencyCaps)
+        .where(eq(emailFrequencyCaps.workspaceId, workspaceId))
+        .limit(1),
+      getDb()
+        .select({ id: emailSuppressions.id })
+        .from(emailSuppressions)
+        .where(eq(emailSuppressions.workspaceId, workspaceId))
+        .limit(1),
+    ]);
+    return {
+      ok: true,
+      message: `${connection.message} Descadastro e controle de frequência disponíveis no banco.`,
+    };
+  } catch {
+    return {
+      ok: false,
+      message:
+        "A conexão Resend respondeu, mas faltam as tabelas de descadastro ou controle de frequência. Revise a configuração do banco antes de disparar.",
+    };
+  }
 }

@@ -92,7 +92,11 @@ async function addOrderContext(
         ),
         statuses ? inArray(orders.status, statuses as never) : undefined,
         statuses?.length === 1 && statuses[0] === "awaiting_payment"
-          ? and(isNull(orders.importBatchId), isNull(orders.paidAt), isNotNull(orders.checkoutUrl))
+          ? and(
+              isNull(orders.importBatchId),
+              isNull(orders.paidAt),
+              isNotNull(orders.checkoutUrl),
+            )
           : undefined,
       ),
     )
@@ -186,6 +190,9 @@ export async function getSegmentRecipients(
         isNull(customers.deletedAt),
         eq(customers.marketingOptOut, false),
         eq(customers.isBlocked, false),
+        segment === "all" || segment === "paid"
+          ? eq(customers.acceptsEmail, true)
+          : undefined,
         audienceCondition,
       ),
     )

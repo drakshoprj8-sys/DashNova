@@ -628,9 +628,9 @@ export function CampaignForm({
                       </span>
                       <span className="text-muted-foreground mt-0.5 block text-xs">
                         {item.key === "all"
-                          ? `Base consolidada da aba Clientes · ${formatCount(counts.all ?? 0)} elegíveis para envio`
+                          ? `Base consolidada da aba Clientes · ${formatCount(counts.all ?? 0)} com consentimento para campanhas`
                           : item.key === "paid"
-                            ? `Pagos informados na aba Clientes · ${formatCount(counts.paid ?? 0)} elegíveis para envio`
+                            ? `Pagos informados na aba Clientes · ${formatCount(counts.paid ?? 0)} com consentimento para campanhas`
                             : item.description}
                       </span>
                     </button>
@@ -644,8 +644,8 @@ export function CampaignForm({
                     <p className="text-sm">
                       <strong>{formatCount(consolidatedCustomerCount)}</strong>{" "}
                       clientes na base consolidada;{" "}
-                      <strong>{formatCount(counts.all ?? 0)}</strong> elegíveis
-                      serão incluídos neste disparo.
+                      <strong>{formatCount(counts.all ?? 0)}</strong> contatos
+                      pré-selecionados com consentimento de e-mail.
                     </p>
                   ) : segment === "paid" ? (
                     <p className="text-sm">
@@ -653,8 +653,8 @@ export function CampaignForm({
                         {formatCount(consolidatedPaidCustomerCount)}
                       </strong>{" "}
                       pagos informados na aba Clientes;{" "}
-                      <strong>{formatCount(counts.paid ?? 0)}</strong> elegíveis
-                      serão incluídos neste disparo.
+                      <strong>{formatCount(counts.paid ?? 0)}</strong> contatos
+                      pré-selecionados com consentimento de e-mail.
                     </p>
                   ) : (
                     <p className="text-sm">
