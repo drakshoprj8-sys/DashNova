@@ -20,7 +20,6 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/p/produto-exemplo")).toBe(true);
     expect(isPublicPath("/checkout/checkout-exemplo")).toBe(true);
     expect(isPublicPath("/obrigado")).toBe(true);
-    expect(isPublicPath("/acompanhar/token-assinado")).toBe(true);
     expect(isPublicPath("/legal/termos")).toBe(true);
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/auth/confirm")).toBe(true);

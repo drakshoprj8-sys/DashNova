@@ -6,7 +6,10 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 import { isLandAt } from "@/features/analytics/world-land-mask";
-import type { LiveGlobePoint } from "@/features/analytics/live-globe-data";
+import {
+  useSimulatedLivePoints,
+  type LiveGlobePoint,
+} from "@/features/analytics/live-globe-data";
 
 /* -------------------------------------------------------------------------- */
 /* Constantes de cena                                                         */
@@ -303,7 +306,7 @@ interface HoverState {
 }
 
 export interface LiveGlobeProps {
-  /** Pontos reais. Uma lista vazia representa ausência de visitantes. */
+  /** Pontos reais. Se ficar vazio/indefinido, entra o feed simulado. */
   points?: LiveGlobePoint[];
   className?: string;
 }
@@ -314,10 +317,9 @@ interface ArcInstance {
   bornAt: number;
 }
 
-const EMPTY_LIVE_POINTS: LiveGlobePoint[] = [];
-
 function LiveGlobeImpl({ points, className }: LiveGlobeProps) {
-  const livePoints = points ?? EMPTY_LIVE_POINTS;
+  const simulated = useSimulatedLivePoints();
+  const livePoints = points && points.length > 0 ? points : simulated;
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
