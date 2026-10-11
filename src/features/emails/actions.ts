@@ -26,7 +26,8 @@ import {
 } from "@/features/emails/segments";
 import { splitProviderBatches } from "@/features/emails/batching";
 import {
-  eligibleCampaignRecipients,
+  inspectCampaignEligibility,
+  describeCampaignExclusions,
   reserveCampaignRecipients,
 } from "@/features/emails/campaign-eligibility";
 import { createUnsubscribeUrl } from "@/features/emails/unsubscribe-token";
@@ -628,17 +629,18 @@ export async function sendCampaignAction(
     pendingCheckout,
   );
   const workspaceId = await getOrCreateDefaultWorkspace();
-  const eligible = await eligibleCampaignRecipients(
+  const eligibility = await inspectCampaignEligibility(
     workspaceId,
     resolvedRecipients,
     informational,
   );
+  const eligible = eligibility.recipients;
   let recipients = eligible;
   if (recipients.length === 0) {
     return {
       ok: false,
       error: informational
-        ? "Nenhum cliente elegível: campanhas exigem consentimento de e-mail, domínio válido e intervalo de 24 horas desde o último disparo. Confira a aba Clientes."
+        ? `Nenhum cliente elegível para este disparo. ${describeCampaignExclusions(eligibility) || "Nenhum contato foi pré-selecionado neste público. Confira a seleção e os bloqueios na aba Clientes."}`
         : pendingCheckout
           ? "Nenhum pedido elegível: é necessário um pedido aguardando pagamento com checkout publicado e pagamento criado no gateway."
           : "Nenhum pedido elegível: é necessário um pedido não importado com pagamento aprovado no gateway de produção e artigo do catálogo.",

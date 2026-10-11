@@ -37,6 +37,8 @@ vi.mock("@/database/client", () => ({
 }));
 import {
   eligibleCampaignRecipients,
+  inspectCampaignEligibility,
+  describeCampaignExclusions,
   reserveCampaignRecipients,
 } from "@/features/emails/campaign-eligibility";
 const r = (id: string, email: string) => ({ id, email }) as Recipient;
@@ -77,6 +79,54 @@ describe("campaign eligibility and cooldown", () => {
         )
       ).length,
     ).toBe(1);
+  });
+  it("reports the cooldown instead of incorrectly blaming consent or DNS", async () => {
+    mocks.consent = [{ id: "one" }, { id: "two" }];
+    mocks.recent = [{ email: "one@example.com" }, { email: "two@example.com" }];
+    const result = await inspectCampaignEligibility(
+      "workspace",
+      [r("one", "one@example.com"), r("two", "two@example.com")],
+      true,
+    );
+    expect(result).toEqual({
+      recipients: [],
+      excludedRecent: 2,
+      excludedConsent: 0,
+      excludedMailDomain: 0,
+    });
+    expect(mocks.mx).not.toHaveBeenCalled();
+    const message = describeCampaignExclusions(result);
+    expect(message).toContain(
+      "2 contatos receberam um envio aceito pelo Resend há menos de 24 horas",
+    );
+    expect(message).not.toContain("consentimento");
+    expect(message).not.toContain("servidor");
+  });
+  it("counts each excluded contact once and treats failed DNS as unconfirmed", async () => {
+    mocks.consent = [{ id: "recent" }, { id: "dns" }];
+    mocks.recent = [
+      { email: "no@example.com" },
+      { email: "recent@example.com" },
+    ];
+    mocks.mx.mockRejectedValue(new Error("ETIMEOUT"));
+    const result = await inspectCampaignEligibility(
+      "workspace",
+      [
+        r("no", "no@example.com"),
+        r("recent", "recent@example.com"),
+        r("dns", "dns@example.com"),
+      ],
+      true,
+    );
+    expect(result).toEqual({
+      recipients: [],
+      excludedRecent: 1,
+      excludedConsent: 1,
+      excludedMailDomain: 1,
+    });
+    expect(describeCampaignExclusions(result)).toContain(
+      "falhas temporárias de consulta",
+    );
   });
   it("rejects null MX and transient lookup failures instead of guessing addresses", async () => {
     mocks.mx.mockResolvedValue([{ exchange: "." }]);

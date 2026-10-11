@@ -432,7 +432,7 @@ export function CampaignForm({
           <CardTitle className="text-base">Nova notificação</CardTitle>
           <CardDescription>
             {informational
-              ? "Prepare um comunicado informativo para os contatos elegíveis da sua loja."
+              ? "Prepare um comunicado informativo para os contatos da sua loja. A elegibilidade é confirmada ao enviar."
               : "Confira o modelo e selecione os clientes com pedidos verificados."}
           </CardDescription>
         </CardHeader>
@@ -660,9 +660,9 @@ export function CampaignForm({
                     <p className="text-sm">
                       <strong>{formatCount(counts[segment] ?? 0)}</strong>{" "}
                       {(counts[segment] ?? 0) === 1
-                        ? "cliente elegível será incluído"
-                        : "clientes elegíveis serão incluídos"}{" "}
-                      neste disparo.
+                        ? "cliente pré-selecionado"
+                        : "clientes pré-selecionados"}{" "}
+                      para verificação no envio.
                     </p>
                   )}
                 </div>
@@ -821,11 +821,12 @@ export function CampaignForm({
                     </Label>
                     <p className="text-muted-foreground mt-1 text-xs">
                       Exibindo até 25 contatos. Todos os {formatCount(total)}{" "}
-                      elegíveis estão selecionados para o envio.
+                      estão pré-selecionados. O envio ainda verifica
+                      consentimento, domínio de e-mail e intervalo de 24 horas.
                     </p>
                   </div>
                   <Button type="button" variant="default" size="sm" disabled>
-                    <Check /> {formatCount(total)} selecionados
+                    <Check /> {formatCount(total)} pré-selecionados
                   </Button>
                 </div>
                 <div className="divide-border divide-y rounded-md border sm:hidden">

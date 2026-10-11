@@ -11,13 +11,36 @@ import type { Recipient } from "./segments";
 
 export const CAMPAIGN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
+export interface CampaignEligibilityResult {
+  recipients: Recipient[];
+  excludedRecent: number;
+  excludedConsent: number;
+  excludedMailDomain: number;
+}
+
 /** Skip nonexistent mail domains, absent campaign consent and recent recipients. */
 export async function eligibleCampaignRecipients(
   workspaceId: string,
   recipients: Recipient[],
   marketing: boolean,
 ) {
-  if (!recipients.length) return [];
+  return (await inspectCampaignEligibility(workspaceId, recipients, marketing))
+    .recipients;
+}
+
+/** Reports why the existing dispatch protections excluded each contact. */
+export async function inspectCampaignEligibility(
+  workspaceId: string,
+  recipients: Recipient[],
+  marketing: boolean,
+): Promise<CampaignEligibilityResult> {
+  const result: CampaignEligibilityResult = {
+    recipients: [],
+    excludedRecent: 0,
+    excludedConsent: 0,
+    excludedMailDomain: 0,
+  };
+  if (!recipients.length) return result;
   const db = getDb();
   const cutoff = new Date(Date.now() - CAMPAIGN_COOLDOWN_MS);
   const [recent, consent] = await Promise.all([
@@ -49,11 +72,17 @@ export async function eligibleCampaignRecipients(
     recent.map((row) => row.email.trim().toLowerCase()),
   );
   const optedIn = consent ? new Set(consent.map((row) => row.id)) : null;
-  const candidates = recipients.filter(
-    (r) =>
-      !recentlySent.has(r.email.trim().toLowerCase()) &&
-      (!optedIn || optedIn.has(r.id)),
-  );
+  const candidates = recipients.filter((recipient) => {
+    if (optedIn && !optedIn.has(recipient.id)) {
+      result.excludedConsent += 1;
+      return false;
+    }
+    if (recentlySent.has(recipient.email.trim().toLowerCase())) {
+      result.excludedRecent += 1;
+      return false;
+    }
+    return true;
+  });
   const domains = [
     ...new Set(
       candidates
@@ -79,9 +108,32 @@ export async function eligibleCampaignRecipients(
       }),
     );
   }
-  return candidates.filter((r) =>
+  result.recipients = candidates.filter((r) =>
     valid.has(r.email.split("@")[1].toLowerCase()),
   );
+  result.excludedMailDomain = candidates.length - result.recipients.length;
+  return result;
+}
+
+export function describeCampaignExclusions(result: CampaignEligibilityResult) {
+  const count = (value: number) => new Intl.NumberFormat("pt-BR").format(value);
+  const reasons: string[] = [];
+  if (result.excludedRecent) {
+    reasons.push(
+      `${count(result.excludedRecent)} contatos receberam um envio aceito pelo Resend há menos de 24 horas. Aguarde 24 horas desde o último envio de cada destinatário.`,
+    );
+  }
+  if (result.excludedConsent) {
+    reasons.push(
+      `${count(result.excludedConsent)} contatos não têm consentimento de e-mail ativo. Confira a aba Clientes.`,
+    );
+  }
+  if (result.excludedMailDomain) {
+    reasons.push(
+      `Não foi possível confirmar o servidor de e-mail de ${count(result.excludedMailDomain)} contatos. Confira os endereços; falhas temporárias de consulta podem ser verificadas novamente mais tarde.`,
+    );
+  }
+  return reasons.join(" ");
 }
 
 /** Atomic per-address reservation prevents simultaneous campaigns from bypassing the cooldown. */

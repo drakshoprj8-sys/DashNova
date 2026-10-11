@@ -179,13 +179,13 @@ export default async function EmailsPage({
       {requestedSource === "clientes" && initialSegment === "paid" && (
         <Alert variant="success">
           <CheckCircle2 />
-          <AlertTitle>Clientes pagantes prontos para uso</AlertTitle>
+          <AlertTitle>Clientes pagantes pré-selecionados</AlertTitle>
           <AlertDescription>
             O público Pedidos pagos foi selecionado com{" "}
             {formatNumber(consolidatedCustomerCounts.importedPaid)} pagos
-            informados na aba Clientes; {formatNumber(counts.paid)} estão
-            elegíveis para envio. Bloqueados e descadastrados continuam
-            excluídos automaticamente.
+            informados na aba Clientes; {formatNumber(counts.paid)} têm
+            consentimento ativo. O envio ainda verifica o domínio de e-mail e o
+            intervalo de 24 horas. Bloqueados e descadastrados são excluídos.
           </AlertDescription>
         </Alert>
       )}
