@@ -39,8 +39,8 @@ export async function getSession(): Promise<AppSession | null> {
 
   if (!user) return null;
 
-  // Conta válida no Supabase não basta: se houver allowlist, o e-mail precisa
-  // constar nela. Sem isso, quem criar conta direto na API do Supabase entraria.
+  // Conta válida no Supabase não basta: o e-mail precisa constar na allowlist
+  // em produção. Sem isso, quem criar conta direto na API entraria no painel.
   if (!isOwnerEmail(user.email)) return null;
 
   return {

@@ -286,7 +286,7 @@ export function ProductLandingForm({
               name="specs"
               rows={4}
               defaultValue={joinSpecs(content.specs)}
-              placeholder={"Marca: ALPHA GAMER\nCor: Cinzento"}
+              placeholder={"Marca: Exemplo\nCor: Cinzento"}
               className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 w-full rounded-md border px-3 py-2 font-mono text-xs shadow-xs outline-none focus-visible:ring-[3px]"
             />
           </div>

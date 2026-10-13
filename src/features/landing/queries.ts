@@ -3,16 +3,13 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/database/client";
 import { products } from "@/database/schema";
-import type { LandingProduct } from "@/features/landing/technebula-data";
-import { alphaGamerNebula } from "@/features/landing/technebula-data";
+import type { LandingProduct } from "@/features/landing/types";
+import { isCompanyComplete } from "@/lib/company";
+import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 
 /**
  * Busca um produto publicado pelo slug (tabela `products`, campo
  * `landing_content` com o conteúdo rico da página).
- *
- * Enquanto o produto não estiver cadastrado no banco (ex.: ambiente sem
- * seed rodado), cai para o catálogo estático — a landing nunca fica fora
- * do ar por falta de dado.
  *
  * Envolvida em `cache()`: a mesma requisição chama isto no `generateMetadata`
  * e ao renderizar a página — assim o banco é consultado uma vez só.
@@ -20,13 +17,22 @@ import { alphaGamerNebula } from "@/features/landing/technebula-data";
 export const getProductBySlug = cache(async function getProductBySlug(
   slug: string,
 ): Promise<LandingProduct | null> {
+  if (!isCompanyComplete()) return null;
+
   if (isDatabaseConfigured()) {
     try {
       const db = getDb();
+      const workspaceId = await getOrCreateDefaultWorkspace();
       const rows = await db
         .select()
         .from(products)
-        .where(and(eq(products.slug, slug), isNull(products.deletedAt)))
+        .where(
+          and(
+            eq(products.workspaceId, workspaceId),
+            eq(products.slug, slug),
+            isNull(products.deletedAt),
+          ),
+        )
         .limit(1);
 
       const row = rows[0];
@@ -62,5 +68,5 @@ export const getProductBySlug = cache(async function getProductBySlug(
     }
   }
 
-  return slug === alphaGamerNebula.slug ? alphaGamerNebula : null;
+  return null;
 });

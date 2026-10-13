@@ -7,6 +7,7 @@ import {
   renderTemplate,
   suggestTemplate,
 } from "@/features/carts/templates";
+import { company } from "@/lib/company";
 
 describe("renderTemplate", () => {
   it("substitui as variáveis pelos valores fornecidos", () => {
@@ -183,7 +184,7 @@ describe("qualidade dos modelos", () => {
   it("mensagem de WhatsApp identifica a marca e oferece saída", () => {
     // O destinatário vê só um número desconhecido: sem marca, parece golpe.
     for (const t of templates) {
-      expect(t.whatsappBody).toContain("PCG VIP");
+      expect(t.whatsappBody).toContain(company.tradeName);
       expect(t.whatsappBody).toContain("PARAR");
     }
   });

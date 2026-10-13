@@ -18,7 +18,10 @@ import {
   products,
 } from "@/database/schema";
 import { resolveCheckoutAttribution } from "@/features/attribution/server";
-import { enqueueUtmifyOrderUpdate, scheduleUtmifyDeliveries } from "@/features/pixels/utmify";
+import {
+  enqueueUtmifyOrderUpdate,
+  scheduleUtmifyDeliveries,
+} from "@/features/pixels/utmify";
 import {
   normalizeEmail,
   normalizePhone,
@@ -37,12 +40,14 @@ import {
   sendPurchaseToMetaCapi,
 } from "@/features/pixels/meta-capi";
 import { getLandingPageMetaSettings } from "@/features/pixels/queries";
+import { getPublishedCheckoutBySlug } from "@/features/checkouts/queries";
 import {
   resolveVariantForPurchase,
   type VariantResolution,
 } from "@/features/variants/resolve";
 import { formatMoney } from "@/lib/format";
 import { and, eq, or } from "drizzle-orm";
+import { COMMERCE_NOT_READY_MESSAGE, isCompanyComplete } from "@/lib/company";
 
 export type CheckoutActionResult =
   | { status: "validation_error"; error: string }
@@ -99,6 +104,7 @@ export async function submitCheckoutAction(
     city: formData.get("city"),
     paymentMethod: formData.get("paymentMethod"),
     quantity: formData.get("quantity"),
+    checkoutSlug: formData.get("checkoutSlug"),
     productSlug: formData.get("productSlug"),
     variantId: formData.get("variantId") ?? "",
     shippingMethodId: formData.get("shippingMethodId") ?? "",
@@ -120,8 +126,29 @@ export async function submitCheckoutAction(
   }
 
   const data = parsed.data;
+  if (!isCompanyComplete()) {
+    return {
+      status: "unavailable",
+      message: COMMERCE_NOT_READY_MESSAGE,
+    };
+  }
+
   // Telefone chega ao gateway sempre no formato internacional.
   const phone = data.phone ? normalizePtPhone(data.phone) : undefined;
+  const checkout = await getPublishedCheckoutBySlug(data.checkoutSlug);
+  if (!checkout || checkout.productSlug !== data.productSlug) {
+    return {
+      status: "unavailable",
+      message: "Este checkout já não está publicado. Nenhum valor foi cobrado.",
+    };
+  }
+  if (!checkout.paymentMethods.includes(data.paymentMethod)) {
+    return {
+      status: "validation_error",
+      error: "Este método de pagamento não está ativo neste checkout.",
+    };
+  }
+
   const product = await getProductBySlug(data.productSlug);
 
   if (!product || product.slug !== data.productSlug) {
@@ -408,13 +435,13 @@ export async function submitCheckoutAction(
           country: "PT",
         },
       },
-      successUrl: `${appUrl}/checkout/${product.slug}`,
+      successUrl: `${appUrl}/checkout/${checkout.slug}`,
       metadata: {
         description: (chosenVariant
           ? `${product.name} — ${chosenVariant.label}`
           : product.name
         ).slice(0, 140),
-        checkoutUrl: `${appUrl}/checkout/${product.slug}`,
+        checkoutUrl: `${appUrl}/checkout/${checkout.slug}`,
         productType: "physical",
       },
     });
@@ -435,14 +462,18 @@ export async function submitCheckoutAction(
       .update(orders)
       .set({
         status: "awaiting_payment",
-        checkoutUrl: `${appUrl}/checkout/${product.slug}`,
+        checkoutUrl: `${appUrl}/checkout/${checkout.slug}`,
         updatedAt: new Date(),
       })
       .where(eq(orders.id, order.id));
 
     await db
       .update(carts)
-      .set({ status: "converted", recoveredAt: new Date(), updatedAt: new Date() })
+      .set({
+        status: "converted",
+        recoveredAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(carts.id, cart.id));
 
     const utmifyDeliveries = await enqueueUtmifyOrderUpdate(

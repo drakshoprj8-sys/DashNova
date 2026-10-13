@@ -148,6 +148,27 @@
       "when": 1787276677542,
       "tag": "0020_deep_sharon_ventura",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791083517686,
+      "tag": "0021_secure_public_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791084752956,
+      "tag": "0022_sync_integration_schema_metadata",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791085071388,
+      "tag": "0023_quarantine_legacy_sample_store",
+      "breakpoints": true
     }
   ]
 }

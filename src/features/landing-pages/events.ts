@@ -6,38 +6,6 @@ import { parseUserAgent } from "@/features/analytics/track";
 
 import type { LandingEventInput } from "@/validations/landing-page";
 
-/**
- * Limite de taxa por IP, em memória do processo.
- *
- * Não é um limitador distribuído — em serverless cada instância tem o seu
- * contador. Serve ao propósito real aqui: travar um laço acidental ou um
- * robô simples inundando a tabela de eventos. Se o projeto vier a ligar o
- * Upstash (já previsto no `.env.example`), esta função é o ponto único a
- * trocar.
- */
-const WINDOW_MS = 60_000;
-const MAX_EVENTS_PER_WINDOW = 120;
-const hits = new Map<string, { count: number; resetAt: number }>();
-
-export function checkRateLimit(key: string, now = Date.now()): boolean {
-  const current = hits.get(key);
-
-  if (!current || current.resetAt <= now) {
-    hits.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    // Limpeza preguiçosa: evita o mapa crescer sem limite em processos longos.
-    if (hits.size > 5000) {
-      for (const [entryKey, value] of hits) {
-        if (value.resetAt <= now) hits.delete(entryKey);
-      }
-    }
-    return true;
-  }
-
-  if (current.count >= MAX_EVENTS_PER_WINDOW) return false;
-  current.count += 1;
-  return true;
-}
-
 export interface LandingEventContext {
   userAgent: string | null;
 }

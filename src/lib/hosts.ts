@@ -1,7 +1,9 @@
+import { isPathAtOrBelow } from "@/lib/path-security";
+
 /**
  * Distinção entre o domínio do painel e os domínios próprios das lojas.
  *
- * A loja vive num domínio comprado à parte (ex.: pcdignetstore.online) para
+ * A loja vive num domínio comprado à parte (ex.: loja.exemplo.pt) para
  * que os anúncios nunca exponham o endereço administrativo — e para que um
  * bloqueio na loja não derrube o painel junto.
  *
@@ -47,26 +49,23 @@ export function isPanelHost(host: string): boolean {
  * APIs internas) é redirecionado para a raiz — o painel não existe para
  * quem chega pelo domínio da loja.
  */
-const STORE_PREFIXES = [
-  "/p/",
-  "/lp/",
-  "/pay/",
+const STORE_PATHS = [
+  "/p",
+  "/lp",
   // Links de pagamento: o cliente paga no domínio próprio do workspace, sem
   // nunca ver o endereço do painel.
-  "/pagar/",
-  "/checkout/",
-  "/loja",
-  "/legal/",
+  "/pagar",
+  "/checkout",
+  "/obrigado",
+  "/acompanhar",
+  "/legal",
   "/api/public",
   // Webhooks continuam respondendo em qualquer host: são chamados por
   // servidores externos e a autenticidade vem da assinatura HMAC.
-  "/api/webhooks/",
+  "/api/webhooks",
 ];
 
 export function isStorePath(pathname: string): boolean {
   if (pathname === "/") return true;
-  return STORE_PREFIXES.some(
-    (prefix) =>
-      pathname === prefix.replace(/\/$/, "") || pathname.startsWith(prefix),
-  );
+  return STORE_PATHS.some((path) => isPathAtOrBelow(pathname, path));
 }

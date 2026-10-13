@@ -177,7 +177,7 @@ integrado a catálogo, landing page, checkout, pedidos, estoque e pixels.
 
 ### FASE 3 — Checkout — 🔄 em andamento (2026-07-28)
 
-- **Checkout público TechNébula no ar** em `/checkout/[slug]`, no mesmo layout da landing page: etapas Contacto → Entrega → Pagamento, resumo fixo no desktop e recolhível no mobile, seletor de quantidade, portes grátis calculados, seleção MB WAY/Multibanco (únicos métodos do Broski).
+- **Checkout público dinâmico** em `/checkout/[slug]`, ligado apenas a checkouts publicados: etapas Contacto → Entrega → Pagamento, resumo fixo no desktop e recolhível no mobile, seletor de quantidade e seleção MB WAY/Multibanco.
 - Validação Zod no servidor (telemóvel PT +3519…, código postal NNNN-NNN) + proteção contra envio duplicado. O campo de NIF chegou a existir e foi removido a pedido (2026-08-02), para reduzir atrito na compra.
 - **Honestidade**: sem BROSKI_API_KEY/DATABASE_URL o envio valida os dados e informa "Pagamento ainda não ativado — nenhum valor foi cobrado" (testado no navegador). Nenhum sucesso falso é simulado.
 - Pendências da fase: cobrança real (pedido no banco + Broski + webhook, junto da Fase 4), página de sucesso/pendente/erro pós-pagamento, order bump e cupons.
@@ -223,12 +223,11 @@ integrado a catálogo, landing page, checkout, pedidos, estoque e pixels.
 - Validado em 2026-08-03: lint ✅ · typecheck ✅ · 133 testes ✅ · build ✅ ·
   teste de fumo do fluxo público (publicar → abrir → evento → pausar) ✅.
 
-#### Notas anteriores da fase
+#### Limpeza do conteúdo legado (2026-10-04)
 
-- **Landing page TechNébula publicada** (2026-07-28) em `/p/cadeira-gaming-alpha-gamer-nebula` — página estática em código (produto: cadeira ALPHA GAMER Nébula), listada na aba Landing pages do painel. Conteúdo editável em `src/features/landing/technebula-data.ts`.
-- Decisão registrada: o usuário enviou um zip/URL de uma página que imitava a loja real PCDIGA (domínio pcdiga.vip); a importação foi **recusada** por se tratar de imitação de marca de terceiros. A página foi recriada do zero com marca própria "TechNébula", escolhida pelo usuário. Avaliações fictícias ("996 avaliações") NÃO foram reproduzidas — o campo `rating` fica nulo até haver avaliações reais.
-- Botão "Comprar já" leva a `/checkout/[slug]`, que exibe honestamente "checkout em construção" até as Fases 3/4.
-- Editor por blocos e criação de páginas pelo painel continuam planejados para a Fase 8.
+- A landing estática de demonstração, os respetivos assets e o pacote importado com identidade de terceiros foram removidos do repositório.
+- Os registos legados ligados à antiga amostra são despublicados de forma reversível pela migration `0023_quarantine_legacy_sample_store`; pedidos e dados históricos não são apagados.
+- Páginas públicas agora usam apenas produtos e checkouts publicados no banco. Identidade legal incompleta mantém o comércio bloqueado, e avaliações ou alegações não verificadas não recebem fallback estático.
 
 ### FASE 9 — Clientes e comunicação — ⏳ não iniciada
 

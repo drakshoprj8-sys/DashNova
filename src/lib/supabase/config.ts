@@ -15,10 +15,14 @@ export function isSupabaseConfigured(): boolean {
 
 /**
  * O "modo demonstração" abre o painel sem login. Por segurança ele só é
- * permitido quando explicitamente habilitado (ALLOW_DEMO_MODE=true).
+ * permitido fora de produção quando explicitamente habilitado
+ * (ALLOW_DEMO_MODE=true). Em produção a flag é sempre ignorada.
  * Sem essa flag, e sem Supabase configurado, o painel exige login sempre —
  * nunca abre sozinho para um visitante.
  */
 export function isDemoModeAllowed(): boolean {
-  return process.env.ALLOW_DEMO_MODE === "true";
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.ALLOW_DEMO_MODE === "true"
+  );
 }

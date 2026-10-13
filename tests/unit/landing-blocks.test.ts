@@ -19,7 +19,6 @@ import {
 } from "@/features/landing-pages/types";
 import { validateForPublish } from "@/features/landing-pages/publish-rules";
 import { landingContentSchema } from "@/validations/landing-page";
-import { checkRateLimit } from "@/features/landing-pages/events";
 
 describe("catálogo de blocos", () => {
   it("descreve todos os tipos declarados", () => {
@@ -96,7 +95,9 @@ describe("leitura de propriedades", () => {
   });
 
   it("interpreta pares separados por barra vertical", () => {
-    expect(propPairs({ items: "Cor | Preto\nGarantia | 2 anos" }, "items")).toEqual([
+    expect(
+      propPairs({ items: "Cor | Preto\nGarantia | 2 anos" }, "items"),
+    ).toEqual([
       ["Cor", "Preto"],
       ["Garantia", "2 anos"],
     ]);
@@ -124,7 +125,12 @@ describe("validação de publicação", () => {
   it("recusa página sem blocos visíveis", () => {
     const issues = validateForPublish({
       ...withBuyButton,
-      content: { blocks: [{ type: "buy_button", hidden: true }, { type: "price", hidden: true }] },
+      content: {
+        blocks: [
+          { type: "buy_button", hidden: true },
+          { type: "price", hidden: true },
+        ],
+      },
     });
     expect(issues.some((issue) => issue.field === "blocos")).toBe(true);
   });
@@ -149,33 +155,5 @@ describe("validação de publicação", () => {
   it("recusa quando o checkout do produto não resolve", () => {
     const issues = validateForPublish({ ...withBuyButton, product: null });
     expect(issues.some((issue) => issue.field === "checkout")).toBe(true);
-  });
-});
-
-describe("limite de taxa dos eventos públicos", () => {
-  it("permite dentro da janela e bloqueia depois do limite", () => {
-    const key = `teste-${Math.random()}`;
-    const now = 1_000_000;
-
-    for (let i = 0; i < 120; i += 1) {
-      expect(checkRateLimit(key, now)).toBe(true);
-    }
-    expect(checkRateLimit(key, now)).toBe(false);
-  });
-
-  it("liberta o limite depois de a janela expirar", () => {
-    const key = `teste-${Math.random()}`;
-    const now = 2_000_000;
-
-    for (let i = 0; i < 120; i += 1) checkRateLimit(key, now);
-    expect(checkRateLimit(key, now)).toBe(false);
-    expect(checkRateLimit(key, now + 61_000)).toBe(true);
-  });
-
-  it("conta cada visitante separadamente", () => {
-    const now = 3_000_000;
-    for (let i = 0; i < 120; i += 1) checkRateLimit("ip-a", now);
-    expect(checkRateLimit("ip-a", now)).toBe(false);
-    expect(checkRateLimit("ip-b", now)).toBe(true);
   });
 });

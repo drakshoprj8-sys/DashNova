@@ -73,17 +73,17 @@ describe("endereço público segundo a hospedagem", () => {
   it("usa o endereço do serviço quando a página é hospedada fora", () => {
     const url = resolveLandingPublicUrl(
       {
-        slug: "samsung-galaxy-a55-5g",
+        slug: "produto-exemplo",
         deployment: {
           ...baseDeployment,
           provider: "vercel",
           status: "ready",
-          url: "https://exemplo.vercel.app/lp/samsung-galaxy-a55-5g",
+          url: "https://exemplo.vercel.app/lp/produto-exemplo",
         },
       },
       appUrl,
     );
-    expect(url).toBe("https://exemplo.vercel.app/lp/samsung-galaxy-a55-5g");
+    expect(url).toBe("https://exemplo.vercel.app/lp/produto-exemplo");
   });
 
   it("não inventa endereço enquanto o primeiro deploy não acontecer", () => {

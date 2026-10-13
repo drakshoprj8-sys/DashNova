@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 
+import { brand } from "@/lib/brand";
 import { company, isCompanyComplete } from "@/lib/company";
+
+export const metadata: Metadata = isCompanyComplete()
+  ? {}
+  : { robots: { index: false, follow: false } };
 
 const PAGES = [
   { href: "/legal/termos", label: "Termos e Condições" },
@@ -15,6 +21,7 @@ export default function LegalLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const complete = isCompanyComplete();
+  const publicName = company.tradeName.trim() || brand.name;
 
   return (
     <div className="min-h-svh bg-white text-zinc-900">
@@ -24,7 +31,7 @@ export default function LegalLayout({
             href="/"
             className="text-xl font-black tracking-tight text-white"
           >
-            Tech<span className="text-violet-400">Nébula</span>
+            {publicName}
           </Link>
         </div>
       </header>
@@ -35,9 +42,9 @@ export default function LegalLayout({
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <p>
               <strong>Página incompleta.</strong> Os dados de identificação da
-              empresa (denominação, NIF e morada) ainda não foram preenchidos em{" "}
-              <code className="font-mono text-xs">src/lib/company.ts</code>. A
-              lei portuguesa exige estas informações antes de vender ao público.
+              empresa (denominação, NIF e morada) ainda não foram publicados.
+              Esta loja não deve aceitar encomendas até a regularização dessas
+              informações.
             </p>
           </div>
         )}
@@ -73,7 +80,7 @@ export default function LegalLayout({
       </main>
 
       <footer className="border-t bg-zinc-50 py-6 text-center text-xs text-zinc-500">
-        © {new Date().getFullYear()} {company.tradeName}
+        © {new Date().getFullYear()} {publicName}
       </footer>
     </div>
   );

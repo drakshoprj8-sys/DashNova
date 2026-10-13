@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { techNebulaStore } from "@/features/landing/technebula-data";
 import { getProductBySlug } from "@/features/landing/queries";
 import { ProductLanding } from "@/features/landing/product-landing";
 import { PixelScripts } from "@/features/pixels/pixel-scripts";
@@ -9,10 +8,12 @@ import { Tracker } from "@/features/analytics/tracker";
 import { getPublishedReviews } from "@/features/reviews/queries";
 import { CookieBanner } from "@/features/consent/cookie-banner";
 import { getWorkspaceBranding } from "@/features/branding/queries";
+import { getPublishedCheckoutForProductSlug } from "@/features/checkouts/queries";
 import {
   ProductCustomCodeBottom,
   ProductCustomCodeTop,
 } from "@/features/custom-code/public-injector";
+import { isCompanyComplete } from "@/lib/company";
 
 /**
  * Landing page de um produto, com pixel, rastreio e banner de cookies.
@@ -22,14 +23,18 @@ import {
  * cadastrado em Landing pages → Domínios.
  */
 export async function LandingPageView({ slug }: { slug: string }) {
+  if (!isCompanyComplete()) notFound();
+
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
   // Avaliações vêm da tabela gerida no painel (Provas sociais).
-  const [reviews, branding] = await Promise.all([
+  const [reviews, branding, checkout] = await Promise.all([
     getPublishedReviews(product.slug),
     getWorkspaceBranding(),
+    getPublishedCheckoutForProductSlug(product.slug),
   ]);
+  if (!checkout) notFound();
   const withReviews = { ...product, reviews };
 
   return (
@@ -50,7 +55,11 @@ export async function LandingPageView({ slug }: { slug: string }) {
         currency={product.currency}
       />
       <ProductCustomCodeTop productId={product.id} />
-      <ProductLanding product={withReviews} branding={branding} />
+      <ProductLanding
+        product={withReviews}
+        checkoutSlug={checkout.slug}
+        branding={branding}
+      />
       <ProductCustomCodeBottom productId={product.id} />
       <CookieBanner />
     </>
@@ -66,13 +75,30 @@ export async function landingMetadata(
   slug: string,
   canonicalUrl?: string,
 ): Promise<Metadata> {
-  const product = await getProductBySlug(slug);
-  if (!product) {
-    return { title: `Produto não encontrado · ${techNebulaStore.name}` };
+  if (!isCompanyComplete()) {
+    return {
+      title: "Loja indisponível",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const [product, branding] = await Promise.all([
+    getProductBySlug(slug),
+    getWorkspaceBranding(),
+  ]);
+  const storeName = branding.storeName.trim() || "Minha Loja";
+  const checkout = product
+    ? await getPublishedCheckoutForProductSlug(product.slug)
+    : null;
+  if (!product || !checkout) {
+    return {
+      title: `Produto não encontrado · ${storeName}`,
+      robots: { index: false, follow: false },
+    };
   }
 
   return {
-    title: `${product.name} · ${techNebulaStore.name}`,
+    title: `${product.name} · ${storeName}`,
     description: product.shortPitch,
     ...(canonicalUrl ? { alternates: { canonical: canonicalUrl } } : {}),
   };

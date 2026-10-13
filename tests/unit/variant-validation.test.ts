@@ -166,7 +166,8 @@ describe("checkout com variação", () => {
     city: "Lisboa",
     paymentMethod: "mbway",
     quantity: "1",
-    productSlug: "cadeira-gamer",
+    checkoutSlug: "checkout-exemplo",
+    productSlug: "produto-exemplo",
   };
 
   it("aceita o identificador público da variação", () => {

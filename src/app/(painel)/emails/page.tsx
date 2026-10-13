@@ -22,6 +22,7 @@ import {
 import { SEGMENTS, type SegmentKey } from "@/features/emails/types";
 import { isResendConfigured } from "@/features/emails/resend-provider";
 import { CampaignForm } from "@/features/emails/campaign-form";
+import { ResendConnectionCheck } from "@/features/emails/resend-connection-check";
 import { PaidCustomersImport } from "@/features/emails/paid-customers-import";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +71,7 @@ export default async function EmailsPage({
     (segment) => segment.key === requestedSegment,
   )
     ? (requestedSegment as Exclude<SegmentKey, "custom">)
-    : "pending";
+    : "imported_paid";
   const customerIds = (recipientsParamRaw ?? "")
     .split(",")
     .map((value) => value.trim())
@@ -86,7 +87,10 @@ export default async function EmailsPage({
     getSegmentCounts(),
     getConsolidatedCustomerCounts(),
     customerIds.length > 0
-      ? getCustomRecipients(customerIds)
+      ? getCustomRecipients(
+          customerIds,
+          initialSegment === "pending" ? ["awaiting_payment"] : undefined,
+        )
       : Promise.resolve(null),
     getEmailDashboardOverview(),
     getSegmentRecipients("pending").then((recipients) =>
@@ -96,7 +100,17 @@ export default async function EmailsPage({
   const resendReady = isResendConfigured();
   const summary = [
     { label: "Total", value: overview.stats.total, icon: Send },
-    { label: "Enviados", value: overview.stats.sent, icon: MailCheck },
+    { label: "Aceitos pelo Resend", value: overview.stats.sent, icon: Send },
+    {
+      label: "Entrega confirmada",
+      value: overview.stats.delivered,
+      icon: MailCheck,
+    },
+    {
+      label: "Aguardando entrega",
+      value: overview.stats.awaitingDelivery,
+      icon: Clock3,
+    },
     { label: "Falhados", value: overview.stats.failed, icon: MailX },
     { label: "Em fila", value: overview.stats.queued, icon: Clock3 },
   ];
@@ -105,17 +119,16 @@ export default async function EmailsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-xl font-bold">Emails</h2>
+          <h2 className="text-xl font-bold">Disparo de emails</h2>
           <p className="text-muted-foreground text-sm">
-            Recuperação de carrinhos e disparos segmentados para os seus
-            clientes
+            Personalize sua mensagem e escolha os clientes da sua base.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={resendReady ? "success" : "muted"}>
             {resendReady ? (
               <>
-                <CheckCircle2 /> Resend conectado
+                <CheckCircle2 /> Resend configurado
               </>
             ) : (
               <>
@@ -123,6 +136,7 @@ export default async function EmailsPage({
               </>
             )}
           </Badge>
+          <ResendConnectionCheck />
           <PaidCustomersImport />
         </div>
       </div>
@@ -138,7 +152,7 @@ export default async function EmailsPage({
         </Alert>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {summary.map((item) => (
           <Card key={item.label}>
             <CardContent className="flex items-center justify-between p-4">
@@ -147,7 +161,7 @@ export default async function EmailsPage({
                   {item.label}
                 </p>
                 <p className="mt-1 text-2xl font-bold tabular-nums">
-                  {item.value}
+                  {formatNumber(item.value)}
                 </p>
               </div>
               <item.icon className="text-muted-foreground size-5" />
@@ -156,19 +170,25 @@ export default async function EmailsPage({
         ))}
       </div>
 
-      {requestedSource === "clientes" && initialSegment === "paid" && (
-        <Alert variant="success">
-          <CheckCircle2 />
-          <AlertTitle>Clientes pagantes prontos para uso</AlertTitle>
-          <AlertDescription>
-            O público Pedidos pagos foi selecionado com{" "}
-            {formatNumber(consolidatedCustomerCounts.importedPaid)} pagos
-            informados na aba Clientes; {formatNumber(counts.paid)} estão
-            elegíveis para envio. Bloqueados e descadastrados continuam
-            excluídos automaticamente.
-          </AlertDescription>
-        </Alert>
-      )}
+      <p className="text-muted-foreground text-sm">
+        Sent confirma que o Resend aceitou o envio. Delivered confirma que o
+        servidor do destinatário recebeu o e-mail; a mensagem ainda pode ir para
+        spam.
+      </p>
+
+      {requestedSource === "clientes" &&
+        (initialSegment === "paid" || initialSegment === "imported_paid") && (
+          <Alert variant="success">
+            <CheckCircle2 />
+            <AlertTitle>Clientes pagantes pré-selecionados</AlertTitle>
+            <AlertDescription>
+              Seus clientes pagos da outra loja estão disponíveis neste público.{" "}
+              {formatNumber(counts[initialSegment])} contatos estão
+              pré-selecionados. O envio ainda verifica o domínio de e-mail e o
+              intervalo de 24 horas. Bloqueados e descadastrados são excluídos.
+            </AlertDescription>
+          </Alert>
+        )}
 
       <CampaignForm
         counts={counts}
@@ -179,6 +199,13 @@ export default async function EmailsPage({
         initialSegment={initialSegment}
         consolidatedCustomerCount={consolidatedCustomerCounts.total}
         consolidatedPaidCustomerCount={consolidatedCustomerCounts.importedPaid}
+        audienceTotals={{
+          all: consolidatedCustomerCounts.total,
+          paid: consolidatedCustomerCounts.approved,
+          imported_paid: consolidatedCustomerCounts.importedPaid,
+          imported_pending: consolidatedCustomerCounts.importedPending,
+        }}
+        senderEmail={process.env.RESEND_FROM_EMAIL}
         initialDispatchId={crypto.randomUUID()}
       />
 
@@ -190,7 +217,9 @@ export default async function EmailsPage({
         <AlertDescription>
           Clientes bloqueados, descadastrados ou sem consentimento são
           excluídos. Cada disparo usa uma chave única para impedir reenvios
-          duplicados.
+          duplicados. Campanhas exigem consentimento de e-mail, domínio com
+          servidor de correio e intervalo de 24 horas por destinatário. Todos os
+          disparos incluem um link de descadastro.
         </AlertDescription>
       </Alert>
     </div>

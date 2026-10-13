@@ -9,8 +9,8 @@ describe("CheckoutFooter", () => {
     render(
       <CheckoutFooter
         backgroundColor="#e30613"
-        checkoutSlug="samsung-galaxy-a55-5g"
-        productSlug="samsung-galaxy-a55-5g"
+        checkoutSlug="checkout-exemplo"
+        productSlug="produto-exemplo"
         storeName="Minha Loja"
         supportEmail="apoio@minhaloja.pt"
       />,
@@ -22,15 +22,16 @@ describe("CheckoutFooter", () => {
     expect(screen.getByText("Informações Legais")).toBeTruthy();
     expect(screen.getByAltText("MB WAY")).toBeTruthy();
     expect(screen.getByAltText("Multibanco")).toBeTruthy();
-    expect(screen.getByText("14 dias para devolver")).toBeTruthy();
+    expect(screen.getByText(/Reveja os dados da encomenda/)).toBeTruthy();
+    expect(screen.queryByText("14 dias para devolver")).toBeNull();
   });
 
   it("usa somente métodos aceites e mantém links públicos reais", () => {
     render(
       <CheckoutFooter
         backgroundColor="#e30613"
-        checkoutSlug="samsung-galaxy-a55-5g"
-        productSlug="samsung-galaxy-a55-5g"
+        checkoutSlug="checkout-exemplo"
+        productSlug="produto-exemplo"
         storeName="Minha Loja"
         supportEmail="apoio@minhaloja.pt"
       />,
@@ -45,7 +46,10 @@ describe("CheckoutFooter", () => {
       screen
         .getByRole("link", { name: "Página do produto" })
         .getAttribute("href"),
-    ).toBe("/p/samsung-galaxy-a55-5g");
+    ).toBe("/p/produto-exemplo");
+    expect(
+      screen.getByRole("link", { name: "Checkout" }).getAttribute("href"),
+    ).toBe("/checkout/checkout-exemplo");
     expect(
       screen
         .getByRole("link", { name: "Envios e Entregas" })

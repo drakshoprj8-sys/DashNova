@@ -28,6 +28,7 @@ import { computeLinkTotal } from "@/features/payment-links/pricing";
 import { buildPaymentAttemptIdempotencyKey } from "@/features/payment-links/slug";
 import { resolveLinkState } from "@/features/payment-links/types";
 import { formatMoney } from "@/lib/format";
+import { COMMERCE_NOT_READY_MESSAGE, isCompanyComplete } from "@/lib/company";
 import { getRequestUrl } from "@/lib/request-url";
 import { rateLimit } from "@/lib/rate-limit";
 import { BroskiApiError } from "@/payment-providers/broski";
@@ -270,6 +271,14 @@ function toCreatedPaymentResult(
 export async function submitPaymentLinkCheckoutAction(
   input: PaymentLinkCheckoutInput,
 ): Promise<PaymentLinkCheckoutResult> {
+  if (!isCompanyComplete()) {
+    return {
+      status: "link_unavailable",
+      reason: "seller_not_ready",
+      message: COMMERCE_NOT_READY_MESSAGE,
+    };
+  }
+
   const parsed = paymentLinkCheckoutSchema.safeParse(input);
   if (!parsed.success) {
     return {

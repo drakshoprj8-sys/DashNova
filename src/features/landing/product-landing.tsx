@@ -18,18 +18,19 @@ import {
 
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/format";
-import type {
-  LandingProduct,
-  ProductReview,
-} from "@/features/landing/technebula-data";
-import { techNebulaStore } from "@/features/landing/technebula-data";
+import type { LandingProduct, ProductReview } from "@/features/landing/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { sendTrack } from "@/features/analytics/tracker";
 
 interface ProductLandingProps {
   product: LandingProduct;
-  branding: { storeName: string; logoUrl: string | null };
+  checkoutSlug: string;
+  branding: {
+    storeName: string;
+    logoUrl: string | null;
+    supportEmail: string | null;
+  };
 }
 
 function initialsOf(name: string): string {
@@ -191,7 +192,11 @@ function ReviewsSection({ product }: { product: LandingProduct }) {
   );
 }
 
-export function ProductLanding({ product, branding }: ProductLandingProps) {
+export function ProductLanding({
+  product,
+  checkoutSlug,
+  branding,
+}: ProductLandingProps) {
   const [activeImage, setActiveImage] = React.useState(0);
   const [quantity, setQuantity] = React.useState(1);
   const [tab, setTab] = React.useState<"descricao" | "envios">("descricao");
@@ -211,7 +216,7 @@ export function ProductLanding({ product, branding }: ProductLandingProps) {
       {/* Cabeçalho — a logo (ou nome da loja) fica sempre centralizada. */}
       <header className="bg-zinc-950 py-6 md:py-7">
         <div className="mx-auto flex max-w-6xl items-center justify-center px-4">
-          <Link href="#" className="flex items-center">
+          <Link href={`/p/${product.slug}`} className="flex items-center">
             {branding.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -339,11 +344,11 @@ export function ProductLanding({ product, branding }: ProductLandingProps) {
               <p className="text-sm text-zinc-500">Preço com IVA incluído</p>
             </div>
 
-            {/* Pagamento seguro */}
+            {/* Métodos de pagamento */}
             <div className="mt-5 rounded-xl border bg-zinc-50 p-4">
               <p className="flex items-center gap-2 text-sm font-semibold">
                 <ShieldCheck className="size-4 text-emerald-600" />
-                Pagamento seguro em Portugal
+                Métodos de pagamento disponíveis
               </p>
               <div className="mt-3 flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -367,7 +372,7 @@ export function ProductLanding({ product, branding }: ProductLandingProps) {
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-1.5 font-semibold text-red-600">
                     <span className="size-2 animate-pulse rounded-full bg-red-600" />
-                    Últimas unidades em stock
+                    Disponibilidade em stock
                   </span>
                   <span className="text-zinc-500">
                     {product.stockRemaining} restantes
@@ -413,7 +418,7 @@ export function ProductLanding({ product, branding }: ProductLandingProps) {
                 className="h-11 flex-1 bg-orange-500 text-base font-bold hover:bg-orange-600"
               >
                 <Link
-                  href={`/checkout/${product.slug}?qty=${quantity}`}
+                  href={`/checkout/${checkoutSlug}?qty=${quantity}`}
                   onClick={() =>
                     sendTrack("click_buy", {
                       productSlug: product.slug,
@@ -431,16 +436,11 @@ export function ProductLanding({ product, branding }: ProductLandingProps) {
             <ul className="mt-6 space-y-2.5 text-sm">
               <li className="flex items-center gap-2 text-zinc-700">
                 <Truck className="size-4 shrink-0 text-emerald-600" />
-                Portes grátis acima de {fmt(product.freeShippingFromCents)} ·
-                Entrega em {product.deliveryEstimate}
+                Prazo estimado de entrega: {product.deliveryEstimate}
               </li>
               <li className="flex items-center gap-2 text-zinc-700">
                 <RotateCcw className="size-4 shrink-0 text-emerald-600" />
-                Devolução gratuita até {product.returnDays} dias
-              </li>
-              <li className="flex items-center gap-2 text-zinc-700">
-                <ShieldCheck className="size-4 shrink-0 text-emerald-600" />
-                Produto original com garantia do fabricante
+                Prazo informado para devolução: {product.returnDays} dias
               </li>
             </ul>
           </div>
@@ -524,27 +524,28 @@ export function ProductLanding({ product, branding }: ProductLandingProps) {
               ) : (
                 <>
                   <p>
-                    <strong>Envios:</strong> encomendas processadas em 24–48 h
-                    úteis, com entrega em {product.deliveryEstimate} em todo
-                    Portugal continental. Portes grátis em compras acima de{" "}
-                    {fmt(product.freeShippingFromCents)}.
+                    <strong>Envios:</strong> prazo estimado informado para este
+                    produto: {product.deliveryEstimate}. Consulte a política de
+                    envios para conhecer as condições aplicáveis.
                   </p>
                   <p>
-                    <strong>Devoluções:</strong> tem {product.returnDays} dias
-                    após a receção para devolver o produto sem custos, nos
-                    termos da legislação portuguesa de compras à distância.
+                    <strong>Devoluções:</strong> o prazo configurado para este
+                    produto é de {product.returnDays} dias. Consulte a política
+                    de devoluções antes de comprar.
                   </p>
                 </>
               )}
-              <p>
-                <strong>Apoio ao cliente:</strong>{" "}
-                <a
-                  href={`mailto:${techNebulaStore.supportEmail}`}
-                  className="text-violet-600 underline"
-                >
-                  {techNebulaStore.supportEmail}
-                </a>
-              </p>
+              {branding.supportEmail && (
+                <p>
+                  <strong>Apoio ao cliente:</strong>{" "}
+                  <a
+                    href={`mailto:${branding.supportEmail}`}
+                    className="text-violet-600 underline"
+                  >
+                    {branding.supportEmail}
+                  </a>
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -556,33 +557,15 @@ export function ProductLanding({ product, branding }: ProductLandingProps) {
       {/* Rodapé */}
       <footer className="mt-10 bg-zinc-950 text-sm text-zinc-400">
         <div className="mx-auto max-w-6xl px-4">
-          {/* Selos */}
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 border-b border-zinc-800 py-5 text-xs font-medium text-zinc-300">
-            {[
-              { icon: ShieldCheck, label: "Pagamento 100% seguro" },
-              { icon: Truck, label: "Envio rápido 24–48h" },
-              {
-                icon: RotateCcw,
-                label: `Devolução grátis em ${product.returnDays} dias`,
-              },
-              { icon: Check, label: "Compra protegida" },
-            ].map(({ icon: Icon, label }) => (
-              <span key={label} className="flex items-center gap-1.5">
-                <Icon className="size-4 text-zinc-400" />
-                {label}
-              </span>
-            ))}
-          </div>
-
           {/* Colunas */}
-          <div className="grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-8 border-b border-zinc-800 py-10 sm:grid-cols-3">
             <div>
               <p className="text-lg font-black tracking-tight text-white">
                 {branding.storeName}
               </p>
               <p className="mt-3 max-w-xs text-xs leading-relaxed">
-                A sua loja de tecnologia em Portugal — entrega rápida e
-                pagamento seguro por MB WAY e Multibanco.
+                Consulte os detalhes do produto e as políticas do vendedor antes
+                de concluir a compra.
               </p>
               <div className="mt-4 flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -602,32 +585,19 @@ export function ProductLanding({ product, branding }: ProductLandingProps) {
 
             <div>
               <p className="text-xs font-bold tracking-wider text-white uppercase">
-                Loja
-              </p>
-              <ul className="mt-3 space-y-2 text-xs">
-                {["Início", "Produtos", "Promoções", "Novidades"].map((l) => (
-                  <li key={l}>
-                    <a href="#" className="transition-colors hover:text-white">
-                      {l}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-xs font-bold tracking-wider text-white uppercase">
                 Apoio ao Cliente
               </p>
               <ul className="mt-3 space-y-2 text-xs">
-                <li>
-                  <a
-                    href={`mailto:${techNebulaStore.supportEmail}`}
-                    className="transition-colors hover:text-white"
-                  >
-                    Contactos
-                  </a>
-                </li>
+                {branding.supportEmail && (
+                  <li>
+                    <a
+                      href={`mailto:${branding.supportEmail}`}
+                      className="transition-colors hover:text-white"
+                    >
+                      Contactos
+                    </a>
+                  </li>
+                )}
                 {[
                   { label: "Envios e Entregas", href: "/legal/envios" },
                   { label: "Trocas e Devoluções", href: "/legal/devolucoes" },
@@ -683,7 +653,7 @@ export function ProductLanding({ product, branding }: ProductLandingProps) {
           {/* Linha final */}
           <div className="border-t border-zinc-800 py-5 text-center text-xs text-zinc-500">
             © {new Date().getFullYear()} {branding.storeName}. Todos os direitos
-            reservados. · Pagamento seguro · Entrega em todo Portugal
+            reservados.
           </div>
         </div>
       </footer>

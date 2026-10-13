@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { LockKeyhole, RotateCcw, Truck } from "lucide-react";
 
 const footerLinkClass =
   "rounded-sm text-white/85 transition-colors hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white";
@@ -66,8 +65,8 @@ export function CheckoutFooter({
           <div>
             <p className="text-[1.2rem] font-extrabold">{storeName}</p>
             <p className="mt-2 max-w-[320px] text-[0.82rem] leading-5 text-white/80">
-              Entrega em Portugal continental. Pagamento 100% seguro por MB WAY
-              e Multibanco. Direito de devolução até 14 dias.
+              Reveja os dados da encomenda, as condições de envio e as políticas
+              do vendedor antes de concluir o pagamento.
             </p>
 
             <div
@@ -91,21 +90,6 @@ export function CheckoutFooter({
                 />
               </span>
             </div>
-
-            <div className="mt-3 flex flex-wrap gap-x-3.5 gap-y-1 text-[0.75rem] text-white/75">
-              <span className="inline-flex items-center gap-1.5">
-                <LockKeyhole aria-hidden="true" className="size-3.5" />
-                Pagamento seguro
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Truck aria-hidden="true" className="size-3.5" />
-                Envio em Portugal
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <RotateCcw aria-hidden="true" className="size-3.5" />
-                14 dias para devolver
-              </span>
-            </div>
           </div>
 
           <nav
@@ -115,7 +99,6 @@ export function CheckoutFooter({
             <FooterLinkGroup
               title="Loja"
               links={[
-                { href: "/loja", label: "Início" },
                 { href: `/p/${productSlug}`, label: "Página do produto" },
                 { href: `/checkout/${checkoutSlug}`, label: "Checkout" },
               ]}

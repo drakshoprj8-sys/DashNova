@@ -23,6 +23,11 @@ function campaignStatus(campaign: EmailCampaignHistoryItem) {
   if (campaign.queued > 0) {
     return { label: "Processando", variant: "warning" as const };
   }
+  if (campaign.awaitingDelivery > 0) {
+    return { label: "Aguardando entrega", variant: "warning" as const };
+  }
+  if (campaign.total === 0)
+    return { label: "Sem envios", variant: "muted" as const };
   return { label: "Concluído", variant: "success" as const };
 }
 
@@ -111,7 +116,8 @@ export function CampaignHistory({
                     </span>
                     <span className="text-muted-foreground mt-0.5 block text-xs">
                       {formatDate(campaign.sentAt ?? campaign.createdAt)} ·{" "}
-                      {campaign.sent}/{campaign.total} enviados
+                      {campaign.delivered}/{campaign.total} com entrega
+                      confirmada
                       {campaign.failed > 0
                         ? ` · ${campaign.failed} falhados`
                         : ""}
@@ -131,12 +137,20 @@ export function CampaignHistory({
                     id={`campaign-${campaign.id}`}
                     className="space-y-4 border-t px-4 py-4"
                   >
-                    <div className="divide-border grid grid-cols-2 overflow-hidden rounded-md border sm:grid-cols-4 sm:divide-x">
+                    <div className="divide-border grid grid-cols-2 overflow-hidden rounded-md border sm:grid-cols-3 sm:divide-x">
                       <StatCell label="Total" value={campaign.total} />
                       <StatCell
-                        label="Enviados"
+                        label="Aceitos pelo Resend"
                         value={campaign.sent}
+                      />
+                      <StatCell
+                        label="Entrega confirmada"
+                        value={campaign.delivered}
                         tone="success"
+                      />
+                      <StatCell
+                        label="Aguardando entrega"
+                        value={campaign.awaitingDelivery}
                       />
                       <StatCell
                         label="Falhados"

@@ -7,7 +7,7 @@ import { getAppUrl } from "@/lib/app-url";
  *
  * Diferente de `getAppUrl()`, que devolve sempre o domínio global da
  * aplicação: com domínios próprios por loja, um cliente que compra em
- * `pcdignetstore.online` precisa continuar nesse domínio até o fim do
+ * `loja.exemplo.pt` precisa continuar nesse domínio até o fim do
  * pagamento — nunca ser jogado para o endereço do painel.
  *
  * Fica separado de `app-url.ts` porque depende de `next/headers`, e aquele

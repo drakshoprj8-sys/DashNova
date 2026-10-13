@@ -17,16 +17,22 @@ export default function PrivacidadePage() {
       <h2>1. Responsável pelo tratamento</h2>
       <p>
         {identification ||
-          "[Preencher: denominação social, NIF, morada e localidade da empresa]"}
+          "Identificação do responsável indisponível. Esta loja ainda não está pronta para aceitar encomendas."}
       </p>
       <p>
-        Para exercer os seus direitos, contacte:{" "}
-        <a
-          href={`mailto:${company.email}`}
-          className="text-violet-600 underline"
-        >
-          {company.email}
-        </a>
+        {company.email ? (
+          <>
+            Para exercer os seus direitos, contacte:{" "}
+            <a
+              href={`mailto:${company.email}`}
+              className="text-violet-600 underline"
+            >
+              {company.email}
+            </a>
+          </>
+        ) : (
+          "O contacto do responsável será publicado antes de a loja aceitar encomendas."
+        )}
       </p>
 
       <h2>2. Dados que recolhemos</h2>

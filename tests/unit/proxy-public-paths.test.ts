@@ -17,11 +17,13 @@ describe("isPublicPath", () => {
   });
 
   it("libera páginas públicas da loja", () => {
-    expect(isPublicPath("/p/cadeira-gaming-alpha-gamer-nebula")).toBe(true);
-    expect(isPublicPath("/checkout/cadeira-gaming-alpha-gamer-nebula")).toBe(
-      true,
-    );
+    expect(isPublicPath("/p/produto-exemplo")).toBe(true);
+    expect(isPublicPath("/checkout/checkout-exemplo")).toBe(true);
+    expect(isPublicPath("/obrigado")).toBe(true);
+    expect(isPublicPath("/legal/termos")).toBe(true);
     expect(isPublicPath("/login")).toBe(true);
+    expect(isPublicPath("/auth/confirm")).toBe(true);
+    expect(isPublicPath("/redefinir-senha")).toBe(true);
   });
 
   it("mantém o painel protegido", () => {
@@ -33,5 +35,15 @@ describe("isPublicPath", () => {
 
   it("não libera rotas de API que não são webhooks", () => {
     expect(isPublicPath("/api/diagnostico")).toBe(false);
+  });
+
+  it("não confunde prefixos parecidos com rotas públicas", () => {
+    expect(isPublicPath("/login-falso")).toBe(false);
+    expect(isPublicPath("/authentic")).toBe(false);
+    expect(isPublicPath("/api/publicity")).toBe(false);
+    expect(isPublicPath("/api/webhooks-malicioso")).toBe(false);
+    expect(isPublicPath("/pay/falso")).toBe(false);
+    expect(isPublicPath("/loja")).toBe(false);
+    expect(isPublicPath("/loja-admin")).toBe(false);
   });
 });

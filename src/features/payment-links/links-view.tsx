@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Link2,
   MoreHorizontal,
+  Palette,
   Pencil,
   Plus,
   Power,
@@ -231,6 +232,16 @@ function LinkRow({
               >
                 <Pencil className="size-3.5" />
                 Editar
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  router.push(
+                    `/financeiro/links-de-pagamento/${link.id}?aba=checkout`,
+                  )
+                }
+              >
+                <Palette className="size-3.5" />
+                Personalizar checkout
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void copy()}>
                 <Copy className="size-3.5" />

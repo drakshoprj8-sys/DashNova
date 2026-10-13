@@ -10,12 +10,16 @@ export default function EnviosPage() {
       <h1 className="text-2xl font-bold">Envios e Entregas</h1>
 
       <h2>Área de entrega</h2>
-      <p>Entregamos em Portugal continental.</p>
+      <p>
+        A área de entrega disponível é apresentada no checkout antes da
+        conclusão da encomenda.
+      </p>
 
       <h2>Prazos</h2>
       <ul>
-        <li>Processamento da encomenda: 24 a 48 horas úteis.</li>
-        <li>Entrega: 2 a 4 dias úteis após o processamento.</li>
+        <li>
+          O prazo estimado é apresentado na página do produto e no checkout.
+        </li>
         <li>
           Os prazos contam a partir da confirmação do pagamento. Pagamentos por
           Multibanco só são confirmados após o cliente liquidar a referência.
@@ -30,20 +34,27 @@ export default function EnviosPage() {
 
       <h2>Acompanhamento</h2>
       <p>
-        Após a expedição, enviamos por e-mail os dados de acompanhamento, quando
-        disponibilizados pela transportadora.
+        Quando a transportadora disponibilizar rastreio, os respetivos dados
+        poderão ser enviados pelo contacto indicado na encomenda.
       </p>
 
       <h2>Encomenda não entregue</h2>
       <p>
-        Se a encomenda não chegar dentro do prazo previsto, contacte{" "}
-        <a
-          href={`mailto:${company.email}`}
-          className="text-violet-600 underline"
-        >
-          {company.email}
-        </a>{" "}
-        com a referência do pedido para investigarmos junto da transportadora.
+        Se a encomenda não chegar dentro do prazo previsto, contacte o vendedor
+        com a referência do pedido
+        {company.email ? (
+          <>
+            {" "}
+            pelo e-mail{" "}
+            <a
+              href={`mailto:${company.email}`}
+              className="text-violet-600 underline"
+            >
+              {company.email}
+            </a>
+          </>
+        ) : null}
+        .
       </p>
     </>
   );

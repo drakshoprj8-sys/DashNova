@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 
 import { ProcessorView } from "@/features/payment-providers/processor-view";
+import { getAppUrl } from "@/lib/app-url";
 
 export const metadata: Metadata = { title: "Financeiro · Processador" };
 
 export default function ProcessadorPage() {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://<seu-dominio>";
+  const appUrl = getAppUrl();
 
   return (
     <ProcessorView

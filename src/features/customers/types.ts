@@ -17,6 +17,8 @@ export type CustomerSort = (typeof CUSTOMER_SORTS)[number];
 
 export const CUSTOMER_TYPES = [
   "all",
+  "approved",
+  "payments_pending",
   "buyer",
   "imported_paid",
   "imported_pending",
@@ -118,6 +120,8 @@ export interface CustomerListRow {
 
 export interface CustomerStats {
   totalContacts: number;
+  approvedContacts: number;
+  pendingContacts: number;
   buyers: number;
   importedPaid: number;
   importedPending: number;

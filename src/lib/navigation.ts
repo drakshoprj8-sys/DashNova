@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   Eye,
   Wallet,
-  Megaphone,
   Package,
   ReceiptText,
   ShoppingBag,
@@ -13,11 +12,9 @@ import {
   Radar,
   Bell,
   Rocket,
-  Blocks,
   Webhook,
   ScrollText,
   Settings,
-  Store,
   type LucideIcon,
 } from "lucide-react";
 
@@ -53,16 +50,13 @@ export const navigation: NavItem[] = [
       { title: "Link de pagamento", href: "/financeiro/links-de-pagamento" },
     ],
   },
-  { title: "Campanhas", href: "/campanhas", icon: Megaphone, phase: 5 },
   {
     title: "Catálogo",
     icon: Package,
     phase: 2,
     items: [
       { title: "Produtos", href: "/catalogo/produtos" },
-      { title: "Categorias", href: "/catalogo/categorias" },
       { title: "Estoque", href: "/catalogo/estoque" },
-      { title: "Cupons", href: "/catalogo/cupons" },
       { title: "Provas sociais", href: "/provas-sociais" },
     ],
   },
@@ -76,8 +70,6 @@ export const navigation: NavItem[] = [
     icon: PenTool,
     phase: 8,
     items: [
-      { title: "Editor da loja", href: "/editor/loja" },
-      { title: "Editor de landing page", href: "/editor/landing-page" },
       { title: "Editor de checkout", href: "/editor/checkout" },
       { title: "Fretes", href: "/editor/fretes" },
     ],
@@ -98,11 +90,9 @@ export const navigation: NavItem[] = [
       { title: "Domínios", href: "/landing-pages/dominios" },
     ],
   },
-  { title: "Integrações", href: "/integracoes", icon: Blocks, phase: 7 },
   { title: "Webhooks", href: "/webhooks", icon: Webhook, phase: 4 },
   { title: "Logs", href: "/logs", icon: ScrollText, phase: 7 },
   { title: "Configurações", href: "/configuracoes", icon: Settings, phase: 1 },
-  { title: "Ver loja", href: "/loja", icon: Store, phase: 2 },
 ];
 
 /** O caminho atual está dentro desta rota? */

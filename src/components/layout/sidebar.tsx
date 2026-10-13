@@ -37,7 +37,7 @@ interface SidebarProps {
 
 function isItemActive(item: NavItem, pathname: string): boolean {
   if (item.href) {
-    return item.href === "/dashboard" || item.href === "/loja"
+    return item.href === "/dashboard"
       ? pathname === item.href
       : isHrefActive(pathname, item.href);
   }
@@ -196,7 +196,6 @@ export function Sidebar({
               key={item.title}
               href={href}
               onClick={onNavigate}
-              target={item.href === "/loja" ? "_blank" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                 collapsed && "justify-center px-2",

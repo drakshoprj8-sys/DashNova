@@ -34,6 +34,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+debug.log
 !.env.example
 
 # vercel
@@ -45,3 +46,5 @@ next-env.d.ts
 
 # claude local settings (pode conter credenciais usadas em comandos)
 .claude/settings.local.json
+
+.env*

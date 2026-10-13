@@ -87,7 +87,7 @@ export function PixelForm() {
               <Input
                 id="name"
                 name="name"
-                placeholder="Ex.: Meta — PCG VIP"
+                placeholder="Ex.: Meta — Loja principal"
                 required
               />
             </div>
@@ -105,9 +105,7 @@ export function PixelForm() {
 
             {needsToken && (
               <div className="space-y-2">
-                <Label htmlFor="token">
-                  Token de acesso
-                </Label>
+                <Label htmlFor="token">Token de acesso</Label>
                 <Input
                   id="token"
                   name="token"

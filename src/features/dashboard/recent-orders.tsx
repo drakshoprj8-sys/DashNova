@@ -63,6 +63,20 @@ export interface RecentOrdersProps {
   orders: RecentOrderRow[];
 }
 
+function OrderStatusBadge({ status }: { status: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className={
+        STATUS_CLASS[status] ?? "border-white/10 bg-white/[0.05] text-[#aab3c0]"
+      }
+    >
+      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+      {STATUS_LABEL[status] ?? status}
+    </Badge>
+  );
+}
+
 export function RecentOrders({ orders }: RecentOrdersProps) {
   if (orders.length === 0) {
     return (
@@ -82,7 +96,69 @@ export function RecentOrders({ orders }: RecentOrdersProps) {
 
   return (
     <div>
-      <div className="overflow-x-auto">
+      <ul className="divide-y divide-white/[0.06] md:hidden">
+        {orders.map((order) => {
+          const date = formatOrderDate(order.createdAt);
+          return (
+            <li key={order.id} className="space-y-3 px-4 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-mono text-xs font-semibold text-[#c7d0dc]">
+                  {order.reference}
+                </span>
+                <OrderStatusBadge status={order.status} />
+              </div>
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-[#e8edf4]">
+                  {order.customerName ?? "Cliente não identificado"}
+                </p>
+                <p className="mt-1 truncate text-sm text-[#aab3c0]">
+                  {order.productName ?? "Produto não identificado"}
+                  {order.quantity && order.quantity > 1
+                    ? ` · ${order.quantity} unidades`
+                    : ""}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 rounded-md border border-white/[0.06] bg-white/[0.025] p-3 text-xs">
+                <div>
+                  <p className="text-[#8d98a8]">Pagamento</p>
+                  <p className="mt-1 font-medium text-[#dce3ee]">
+                    {order.paymentMethod
+                      ? (METHOD_LABEL[order.paymentMethod] ??
+                        order.paymentMethod)
+                      : "—"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[#8d98a8]">Valor</p>
+                  <p className="mt-1 font-semibold text-[#eef2f7]">
+                    {formatMoney(order.totalCents, order.currency, "pt-BR")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[#8d98a8]">Data</p>
+                  <p className="mt-1 text-[#dce3ee]">
+                    {date.day} · {date.time}
+                  </p>
+                </div>
+                <div className="flex items-end justify-end">
+                  <Link
+                    href="/pedidos"
+                    className="inline-flex items-center gap-1 font-semibold text-fuchsia-300 hover:text-fuchsia-200"
+                    aria-label="Ver lista de pedidos"
+                  >
+                    Ver lista
+                    <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1040px] border-separate border-spacing-0 text-sm">
           <thead>
             <tr className="text-left text-[11px] font-medium tracking-wide text-[#758195] uppercase">
@@ -162,7 +238,7 @@ export function RecentOrders({ orders }: RecentOrdersProps) {
                           {order.productName ?? "Produto não identificado"}
                         </p>
                         {order.quantity && order.quantity > 1 ? (
-                          <p className="mt-0.5 text-[11px] text-[#6f7b8d]">
+                          <p className="mt-0.5 text-[11px] text-[#8d98a8]">
                             {order.quantity} unidades
                           </p>
                         ) : null}
@@ -170,19 +246,7 @@ export function RecentOrders({ orders }: RecentOrdersProps) {
                     </div>
                   </td>
                   <td className="border-b border-white/[0.05] px-3 py-3.5">
-                    <Badge
-                      variant="outline"
-                      className={
-                        STATUS_CLASS[order.status] ??
-                        "border-white/10 bg-white/[0.05] text-[#aab3c0]"
-                      }
-                    >
-                      <span
-                        className="size-1.5 rounded-full bg-current"
-                        aria-hidden="true"
-                      />
-                      {STATUS_LABEL[order.status] ?? order.status}
-                    </Badge>
+                    <OrderStatusBadge status={order.status} />
                   </td>
                   <td className="border-b border-white/[0.05] px-3 py-3.5 text-[#aab3c0]">
                     {order.paymentMethod
@@ -195,7 +259,7 @@ export function RecentOrders({ orders }: RecentOrdersProps) {
                   </td>
                   <td className="border-b border-white/[0.05] px-3 py-3.5 whitespace-nowrap">
                     <p className="text-xs text-[#c0c8d4]">{date.day}</p>
-                    <p className="mt-0.5 text-[11px] text-[#6f7b8d]">
+                    <p className="mt-0.5 text-[11px] text-[#8d98a8]">
                       {date.time}
                     </p>
                   </td>
@@ -219,7 +283,7 @@ export function RecentOrders({ orders }: RecentOrdersProps) {
                         <DropdownMenuItem asChild>
                           <Link href="/pedidos">
                             <ArrowUpRight />
-                            Abrir pedidos
+                            Ver lista de pedidos
                           </Link>
                         </DropdownMenuItem>
                       </DropdownMenuContent>

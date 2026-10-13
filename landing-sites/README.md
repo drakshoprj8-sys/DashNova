@@ -4,6 +4,10 @@ Cada pasta aqui é um site estático completo, com projeto próprio na Vercel. �
 o caminho para as páginas que **não nascem do editor visual** — um site já
 exportado, entregue como pasta de HTML, CSS e imagens.
 
+Antes de publicar, confirme que a página usa apenas marca e ativos autorizados,
+não contém dados pessoais de exemplo e não apresenta escassez, avaliações,
+garantias ou prazos que não possam ser comprovados.
+
 As páginas montadas em `/landing-pages` continuam a viver no banco e a ser
 servidas pela rota `/lp/[slug]` desta aplicação. Publicá-las é uma escrita no
 banco e não passa por aqui.
@@ -13,14 +17,14 @@ banco e não passa por aqui.
 O registo em `landing_pages` é o mesmo dos outros: nome, slug, estado e
 métricas. O que muda são as colunas de hospedagem:
 
-| Coluna                  | Significado                                     |
-| ----------------------- | ----------------------------------------------- |
+| Coluna                  | Significado                                               |
+| ----------------------- | --------------------------------------------------------- |
 | `hosting_provider`      | `vercel` para estas páginas, `infinity` para as do editor |
-| `deployment_url`        | Endereço público que o cartão mostra e copia    |
-| `deployment_project_id` | Projeto na Vercel                               |
-| `deployment_id`         | Último deploy                                   |
-| `deployment_status`     | `idle`, `preparing`, `deploying`, `ready`, `failed` |
-| `deployment_log`        | Saída técnica do último envio                   |
+| `deployment_url`        | Endereço público que o cartão mostra e copia              |
+| `deployment_project_id` | Projeto na Vercel                                         |
+| `deployment_id`         | Último deploy                                             |
+| `deployment_status`     | `idle`, `preparing`, `deploying`, `ready`, `failed`       |
+| `deployment_log`        | Saída técnica do último envio                             |
 
 Com `hosting_provider = "vercel"` o painel troca as ações: aparece
 "Republicar na Vercel" em vez de "Publicar", e "Ver deploy" abre o registo

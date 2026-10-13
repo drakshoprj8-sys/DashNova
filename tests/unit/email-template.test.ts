@@ -75,14 +75,18 @@ describe("email campaign template", () => {
       vars,
     });
 
-    expect(html).toContain("O seu pedido encontra-se pendente de conclusão.");
-    expect(html).toContain("apenas se reconhecer esta compra.");
-    expect(html).toContain("<strong>Artigo:</strong> O seu Produto");
-    expect(html).toContain("Continuar para o Pagamento");
     expect(html).toContain(
-      "Se o botão não funcionar, copie e cole o seguinte endereço na barra do navegador:",
+      "Esta mensagem apresenta os dados registados no seu pedido PED-42.",
     );
-    expect(html).toContain('href="https://suaempresa.site/pagar/6bzge2a64e"');
+    expect(html).toContain(
+      "Se não reconhece a PCCGVIP ou este pedido, desconsidere esta mensagem.",
+    );
+    expect(html).toContain("<strong>Artigo:</strong> Curso &lt;Avançado&gt;");
+    expect(html).toContain("Ver pedido");
+    expect(html).toContain(
+      "Se o botão não funcionar, copie o endereço abaixo no navegador.",
+    );
+    expect(html).toContain('href="https://example.com/checkout/PED-42"');
   });
 
   it("accepts a dynamic checkout link and rejects unsafe protocols", () => {

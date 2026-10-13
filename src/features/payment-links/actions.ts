@@ -11,6 +11,7 @@ import {
   pixels,
 } from "@/database/schema";
 import { requireWorkspaceAccess } from "@/lib/workspace-access";
+import { isCompanyComplete } from "@/lib/company";
 import { generatePaymentLinkSlug } from "@/features/payment-links/slug";
 import {
   buildPaymentLinkUrl,
@@ -333,6 +334,14 @@ export async function savePaymentLinkAction(
   linkId?: string,
   intent: "draft" | "publish" = "draft",
 ): Promise<PaymentLinkActionResult> {
+  if (intent === "publish" && !isCompanyComplete()) {
+    return {
+      ok: false,
+      error:
+        "Preencha os dados legais e o e-mail de apoio antes de publicar cobranças.",
+    };
+  }
+
   const parsed = paymentLinkSchema.safeParse(payload);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
@@ -460,6 +469,14 @@ export async function togglePaymentLinkAction(
   linkId: string,
   isActive: boolean,
 ): Promise<PaymentLinkActionResult> {
+  if (isActive && !isCompanyComplete()) {
+    return {
+      ok: false,
+      error:
+        "Preencha os dados legais e o e-mail de apoio antes de reativar cobranças.",
+    };
+  }
+
   const auth = await requireWorkspace();
   if (!auth.ok) return { ok: false, error: auth.error };
 

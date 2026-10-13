@@ -31,6 +31,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
@@ -180,13 +181,17 @@ function Section({
   icon: Icon,
   title,
   description,
+  hidden = false,
   children,
 }: {
   icon: React.ElementType;
   title: string;
   description?: string;
+  hidden?: boolean;
   children: React.ReactNode;
 }) {
+  if (hidden) return null;
+
   return (
     <Card>
       <CardContent className="space-y-4 pt-5">
@@ -404,6 +409,7 @@ function ToggleRow({
 
 export interface LinkFormProps {
   initial?: LinkFormState;
+  initialTab?: "charge" | "checkout";
   domains: PaymentLinkDomainOption[];
   products: CatalogProductOption[];
   pixels: PaymentLinkPixelOption[];
@@ -412,6 +418,7 @@ export interface LinkFormProps {
 
 export function LinkForm({
   initial,
+  initialTab = "charge",
   domains,
   products,
   pixels,
@@ -431,6 +438,9 @@ export function LinkForm({
   const [createdUrl, setCreatedUrl] = React.useState<string | null>(null);
   const [mobilePreviewOpen, setMobilePreviewOpen] = React.useState(false);
   const [lastSavedAt, setLastSavedAt] = React.useState<Date | null>(null);
+  const [activeTab, setActiveTab] = React.useState<"charge" | "checkout">(
+    initialTab,
+  );
 
   const isEditing = Boolean(initial?.id);
 
@@ -659,8 +669,9 @@ export function LinkForm({
                 {isEditing ? "Editar link" : "Novo link de pagamento"}
               </h2>
               <p className="text-muted-foreground text-sm">
-                Configure a cobrança à esquerda e veja a página do cliente à
-                direita.
+                {activeTab === "charge"
+                  ? "Defina o título, o valor e os dados necessários para cobrar."
+                  : "Personalize a página e acompanhe o resultado no preview."}
               </p>
             </div>
           </div>
@@ -709,9 +720,28 @@ export function LinkForm({
           </div>
         </div>
 
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) =>
+            setActiveTab(value as "charge" | "checkout")
+          }
+        >
+          <TabsList className="h-10 w-full justify-start overflow-x-auto sm:w-fit">
+            <TabsTrigger value="charge" className="min-w-32 px-4">
+              <Landmark className="size-4" aria-hidden="true" />
+              Cobrança
+            </TabsTrigger>
+            <TabsTrigger value="checkout" className="min-w-32 px-4">
+              <Palette className="size-4" aria-hidden="true" />
+              Checkout
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)]">
           <div className="space-y-4">
             <Section
+              hidden={activeTab !== "charge"}
               icon={Settings2}
               title="Informações"
               description="O nome interno aparece apenas no Infinity."
@@ -760,6 +790,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "charge"}
               icon={Landmark}
               title="Métodos de pagamento"
               description="Somente os métodos ativados aparecem ao comprador. A publicação confirma o suporte real da Broski."
@@ -802,6 +833,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "charge"}
               icon={Package}
               title="Produto"
               description="Exibe um item na página. Os dados ficam guardados no link."
@@ -905,6 +937,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "charge"}
               icon={Users}
               title="Dados do cliente"
               description="Escolha visibilidade, obrigatoriedade e ordem dos campos."
@@ -956,6 +989,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "charge"}
               icon={Globe}
               title="Morada e envio"
               description="Para produtos físicos. O frete é somado no servidor."
@@ -1120,6 +1154,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "checkout"}
               icon={ImageIcon}
               title="Marca"
               description="Identifique claramente a empresa proprietária do link."
@@ -1253,6 +1288,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "checkout"}
               icon={Palette}
               title="Aparência"
               description="Personalize fundo, card, tipografia, inputs e botões."
@@ -1555,6 +1591,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "charge"}
               icon={Globe}
               title="Domínio e endereço"
               description="A URL é gerada pelo Infinity, no seu domínio."
@@ -1619,6 +1656,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "checkout"}
               icon={Check}
               title="Página de sucesso"
               description="Conteúdo mostrado somente depois da confirmação real do pagamento."
@@ -1694,6 +1732,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "checkout"}
               icon={Globe}
               title="Título do navegador e SEO"
               description="Páginas de pagamento são noindex, nofollow por padrão."
@@ -1706,7 +1745,10 @@ export function LinkForm({
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
-                      seo: { ...current.seo, browserTitle: event.target.value },
+                      seo: {
+                        ...current.seo,
+                        browserTitle: event.target.value,
+                      },
                     }))
                   }
                 />
@@ -1720,7 +1762,10 @@ export function LinkForm({
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
-                      seo: { ...current.seo, description: event.target.value },
+                      seo: {
+                        ...current.seo,
+                        description: event.target.value,
+                      },
                     }))
                   }
                 />
@@ -1728,6 +1773,7 @@ export function LinkForm({
             </Section>
 
             <Section
+              hidden={activeTab !== "charge"}
               icon={Settings2}
               title="Validade e limites"
               description="Controle até quando e quantas vezes o link pode ser pago."

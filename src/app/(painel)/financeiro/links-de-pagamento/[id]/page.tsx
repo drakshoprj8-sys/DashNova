@@ -29,6 +29,8 @@ export default async function EditarLinkPage(
   props: PageProps<"/financeiro/links-de-pagamento/[id]">,
 ) {
   const { id } = await props.params;
+  const searchParams = await props.searchParams;
+  const initialTab = searchParams.aba === "checkout" ? "checkout" : "charge";
 
   const [record, domains, products, pixels, pixelIds] = await Promise.all([
     getPaymentLinkById(id),
@@ -93,6 +95,7 @@ export default async function EditarLinkPage(
   return (
     <LinkForm
       initial={initial}
+      initialTab={initialTab}
       domains={domains}
       products={products}
       pixels={pixels}

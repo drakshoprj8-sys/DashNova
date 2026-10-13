@@ -7,8 +7,9 @@
  * Esta allowlist é a barreira final: mesmo com credenciais válidas, só os
  * e-mails listados em OWNER_EMAILS recebem sessão no painel.
  *
- * Vazia = sem restrição por e-mail; o acesso continua limitado à associação de
- * workspace, e /configuracoes avisa que a trava está desligada.
+ * Em produção a lista é obrigatória e vazia significa acesso negado. Em
+ * desenvolvimento/testes, a ausência da env continua permissiva para não
+ * impedir a configuração inicial local.
  */
 export function getOwnerEmails(): string[] {
   return (process.env.OWNER_EMAILS ?? "")
@@ -23,7 +24,7 @@ export function isOwnerAllowlistEnabled(): boolean {
 
 export function isOwnerEmail(email: string | null | undefined): boolean {
   const allowlist = getOwnerEmails();
-  if (allowlist.length === 0) return true;
+  if (allowlist.length === 0) return process.env.NODE_ENV !== "production";
 
   return allowlist.includes((email ?? "").trim().toLowerCase());
 }

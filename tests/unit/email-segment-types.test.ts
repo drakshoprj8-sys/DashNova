@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { SEGMENTS } from "@/features/emails/types";
+import { isFixedSegmentKey, SEGMENTS } from "@/features/emails/types";
 
 describe("segmentos de email", () => {
   it("apresenta os pedidos pagos informados na aba Clientes", () => {
@@ -8,8 +8,8 @@ describe("segmentos de email", () => {
 
     expect(paid).toEqual({
       key: "paid",
-      label: "Pedidos pagos",
-      description: "Pagos informados na aba Clientes",
+      label: "Pagamentos aprovados",
+      description: "Pedidos aprovados e clientes pagos da outra loja",
     });
   });
 
@@ -23,5 +23,14 @@ describe("segmentos de email", () => {
       label: "Todos os clientes",
       description: "Base consolidada da aba Clientes",
     });
+  });
+
+  it("aceita apenas públicos fixos na rota de prévia", () => {
+    expect(isFixedSegmentKey("paid")).toBe(true);
+    expect(isFixedSegmentKey("pending")).toBe(true);
+    expect(isFixedSegmentKey("imported_paid")).toBe(true);
+    expect(isFixedSegmentKey("imported_pending")).toBe(true);
+    expect(isFixedSegmentKey("custom")).toBe(false);
+    expect(isFixedSegmentKey("qualquer")).toBe(false);
   });
 });

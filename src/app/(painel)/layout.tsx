@@ -20,6 +20,12 @@ export default async function PainelLayout({
 
   return (
     <div className="flex h-svh w-full overflow-hidden">
+      <a
+        href="#main-content"
+        className="bg-background text-foreground focus:ring-ring sr-only z-50 rounded-md px-4 py-2 text-sm font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:ring-2"
+      >
+        Pular para o conteúdo
+      </a>
       <div className="hidden md:flex">
         <Sidebar
           user={session.user}
@@ -30,8 +36,16 @@ export default async function PainelLayout({
       <div className="flex min-w-0 flex-1 flex-col">
         <Header user={session.user} demoMode={session.demoMode} />
         {session.demoMode && <DemoBanner />}
-        {!session.demoMode && !isOwnerAllowlistEnabled() && <OpenAccessBanner />}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        {!session.demoMode && !isOwnerAllowlistEnabled() && (
+          <OpenAccessBanner />
+        )}
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto p-4 outline-none md:p-6"
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

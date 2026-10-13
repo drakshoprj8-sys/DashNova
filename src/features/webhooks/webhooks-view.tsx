@@ -141,7 +141,7 @@ export function WebhooksView() {
         <div>
           <h2 className="text-xl font-bold tracking-tight">Webhooks</h2>
           <p className="text-muted-foreground text-sm">
-            Gerencie todas as integrações em tempo real da sua loja
+            Gerencie os endpoints e acompanhe as entregas da sua loja
           </p>
         </div>
         <WebhookEndpointSheet />

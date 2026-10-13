@@ -10,6 +10,7 @@ import {
   products,
 } from "@/database/schema";
 import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
+import { isCompanyComplete } from "@/lib/company";
 
 import {
   withContentDefaults,
@@ -463,7 +464,7 @@ export const getPublishedLandingBySlug = cache(
   async function getPublishedLandingBySlug(
     slug: string,
   ): Promise<PublicLandingPage | null> {
-    if (!isDatabaseConfigured()) return null;
+    if (!isDatabaseConfigured() || !isCompanyComplete()) return null;
 
     try {
       const db = getDb();

@@ -17,7 +17,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/format";
-import type { LandingProduct } from "@/features/landing/technebula-data";
+import type { LandingProduct } from "@/features/landing/types";
 import {
   calculateShippingCost,
   type ShippingMethodRow,
@@ -36,6 +36,8 @@ import { Label } from "@/components/ui/label";
 
 interface CheckoutFormProps {
   product: LandingProduct;
+  checkoutSlug: string;
+  paymentMethods: Array<"mbway" | "multibanco">;
   initialQuantity: number;
   shippingMethods: ShippingMethodRow[];
   theme: CheckoutTheme;
@@ -88,6 +90,8 @@ function Section({
 
 export function CheckoutForm({
   product,
+  checkoutSlug,
+  paymentMethods,
   initialQuantity,
   shippingMethods,
   theme,
@@ -103,7 +107,9 @@ export function CheckoutForm({
   >(submitCheckoutAction, null);
 
   const [quantity, setQuantity] = React.useState(initialQuantity);
-  const [method, setMethod] = React.useState<"mbway" | "multibanco">("mbway");
+  const [method, setMethod] = React.useState<"mbway" | "multibanco">(
+    paymentMethods[0] ?? "mbway",
+  );
   const [shippingMethodId, setShippingMethodId] = React.useState(
     shippingMethods[0]?.id ?? "",
   );
@@ -361,6 +367,7 @@ export function CheckoutForm({
 
       {/* Formulário */}
       <form action={formAction} className="space-y-4">
+        <input type="hidden" name="checkoutSlug" value={checkoutSlug} />
         <input type="hidden" name="productSlug" value={product.slug} />
         <input type="hidden" name="variantId" value={variantId} />
         <input type="hidden" name="quantity" value={effectiveQuantity} />
@@ -573,46 +580,49 @@ export function CheckoutForm({
                   hint: "Referência para pagar no homebanking ou ATM",
                 },
               ] as const
-            ).map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => {
-                  setMethod(opt.key);
-                  sendTrack("checkout_payment_selected", {
-                    productSlug: product.slug,
-                    properties: { method: opt.key },
-                  });
-                }}
-                aria-pressed={method === opt.key}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors",
-                  method !== opt.key && "border-zinc-200 hover:border-zinc-300",
-                )}
-                style={
-                  method === opt.key
-                    ? {
-                        borderColor: "var(--checkout-primary)",
-                        backgroundColor:
-                          "color-mix(in srgb, var(--checkout-primary) 8%, white)",
-                      }
-                    : undefined
-                }
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={opt.img}
-                  alt=""
-                  className="h-8 rounded border bg-white px-1.5 py-0.5"
-                />
-                <span>
-                  <span className="block text-sm font-bold">{opt.label}</span>
-                  <span className="block text-xs text-zinc-500">
-                    {opt.hint}
+            )
+              .filter((opt) => paymentMethods.includes(opt.key))
+              .map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => {
+                    setMethod(opt.key);
+                    sendTrack("checkout_payment_selected", {
+                      productSlug: product.slug,
+                      properties: { method: opt.key },
+                    });
+                  }}
+                  aria-pressed={method === opt.key}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors",
+                    method !== opt.key &&
+                      "border-zinc-200 hover:border-zinc-300",
+                  )}
+                  style={
+                    method === opt.key
+                      ? {
+                          borderColor: "var(--checkout-primary)",
+                          backgroundColor:
+                            "color-mix(in srgb, var(--checkout-primary) 8%, white)",
+                        }
+                      : undefined
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={opt.img}
+                    alt=""
+                    className="h-8 rounded border bg-white px-1.5 py-0.5"
+                  />
+                  <span>
+                    <span className="block text-sm font-bold">{opt.label}</span>
+                    <span className="block text-xs text-zinc-500">
+                      {opt.hint}
+                    </span>
                   </span>
-                </span>
-              </button>
-            ))}
+                </button>
+              ))}
           </div>
           <p className="mt-3 flex items-center gap-1.5 text-xs text-zinc-500">
             <Lock className="size-3.5" />

@@ -10,7 +10,8 @@ const base = {
   postalCode: "1000-100",
   city: "Lisboa",
   quantity: 1,
-  productSlug: "cadeira-gaming-alpha-gamer-nebula",
+  checkoutSlug: "checkout-exemplo",
+  productSlug: "produto-exemplo",
 };
 
 function parse(extra: Record<string, unknown>) {
@@ -33,6 +34,16 @@ describe("normalizePtPhone", () => {
 });
 
 describe("checkout — telefone por método de pagamento", () => {
+  it("recusa um checkout sem identificador público", () => {
+    const r = checkoutSchema.safeParse({
+      ...base,
+      checkoutSlug: undefined,
+      paymentMethod: "multibanco",
+      phone: "",
+    });
+    expect(r.success).toBe(false);
+  });
+
   it("Multibanco aceita telefone fixo (bug relatado: +351222001079)", () => {
     const r = parse({ paymentMethod: "multibanco", phone: "+351222001079" });
     expect(r.success).toBe(true);

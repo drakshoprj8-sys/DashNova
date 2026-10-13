@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { isPanelHost, isStorePath, normalizeHost } from "@/lib/hosts";
 
 const PANEL = "painelinfinitydash.online";
-const LOJA = "pcdignetstore.online";
+const LOJA = "loja.exemplo.pt";
 
 afterEach(() => {
   delete process.env.PANEL_HOST;
@@ -11,7 +11,7 @@ afterEach(() => {
 
 describe("normalizeHost", () => {
   it("remove porta, www e maiúsculas", () => {
-    expect(normalizeHost("WWW.PCDignetstore.Online:443")).toBe(LOJA);
+    expect(normalizeHost("WWW.LOJA.EXEMPLO.PT:443")).toBe(LOJA);
     expect(normalizeHost("localhost:3000")).toBe("localhost");
   });
 
@@ -52,10 +52,10 @@ describe("isPanelHost", () => {
 describe("isStorePath", () => {
   it("libera a raiz e as rotas públicas da loja", () => {
     expect(isStorePath("/")).toBe(true);
-    expect(isStorePath("/p/cadeira-gaming-alpha-gamer-nebula")).toBe(true);
-    expect(isStorePath("/checkout/cadeira-gaming-alpha-gamer-nebula")).toBe(true);
+    expect(isStorePath("/p/produto-exemplo")).toBe(true);
+    expect(isStorePath("/checkout/checkout-exemplo")).toBe(true);
+    expect(isStorePath("/obrigado")).toBe(true);
     expect(isStorePath("/legal/termos")).toBe(true);
-    expect(isStorePath("/loja")).toBe(true);
     expect(isStorePath("/api/public/track")).toBe(true);
     expect(isStorePath("/api/webhooks/broski")).toBe(true);
   });
@@ -65,5 +65,14 @@ describe("isStorePath", () => {
     expect(isStorePath("/login")).toBe(false);
     expect(isStorePath("/landing-pages/dominios")).toBe(false);
     expect(isStorePath("/api/dashboard")).toBe(false);
+  });
+
+  it("não libera prefixos apenas parecidos com rotas da loja", () => {
+    expect(isStorePath("/loja-admin")).toBe(false);
+    expect(isStorePath("/api/publicity")).toBe(false);
+    expect(isStorePath("/api/webhooks-malicioso")).toBe(false);
+    expect(isStorePath("/legalidade")).toBe(false);
+    expect(isStorePath("/pay/falso")).toBe(false);
+    expect(isStorePath("/loja")).toBe(false);
   });
 });

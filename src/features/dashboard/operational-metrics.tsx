@@ -94,7 +94,7 @@ export function OperationalMetrics({ snapshot }: OperationalMetricsProps) {
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
               </div>
-              <p className="mt-2 text-[11px] leading-4 text-[#6f7b8d]">
+              <p className="mt-2 text-[11px] leading-4 text-[#8d98a8]">
                 {metric.helper}
               </p>
             </div>

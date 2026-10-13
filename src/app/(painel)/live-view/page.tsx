@@ -14,7 +14,7 @@ export default function LiveViewPage() {
       <EmptyState
         icon={Database}
         title="Banco de dados não conectado"
-        description="Configure o Supabase para acompanhar as sessões em tempo real."
+        description="Configure o Supabase para acompanhar as sessões recentes."
         className="min-h-[420px]"
       />
     );

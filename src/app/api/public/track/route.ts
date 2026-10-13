@@ -6,6 +6,7 @@ import {
   type TrackEvent,
 } from "@/features/analytics/track";
 import { ATTRIBUTION_COOKIE } from "@/features/attribution/utm";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,25 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: Request) {
   try {
+    const forwardedIp = request.headers
+      .get("x-forwarded-for")
+      ?.split(",")[0]
+      ?.trim();
+    const ip =
+      forwardedIp ?? request.headers.get("x-real-ip") ?? "unknown-client";
+    const limit = await rateLimit({
+      namespace: "public-track",
+      identifier: ip,
+      limit: 180,
+      windowSeconds: 60,
+    });
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { ok: false },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
+
     const body = (await request.json().catch(() => null)) as {
       anonymousId?: string;
       event?: string;
@@ -53,7 +73,7 @@ export async function POST(request: Request) {
       },
       {
         userAgent: h.get("user-agent"),
-        ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+        ip: forwardedIp ?? h.get("x-real-ip"),
         country: h.get("x-vercel-ip-country"),
         city: h.get("x-vercel-ip-city")
           ? decodeURIComponent(h.get("x-vercel-ip-city")!)

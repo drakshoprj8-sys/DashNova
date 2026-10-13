@@ -13,6 +13,7 @@ import {
   products,
 } from "@/database/schema";
 import { getAppUrl } from "@/lib/app-url";
+import { isCompanyComplete } from "@/lib/company";
 import { requireWorkspaceAccess } from "@/lib/workspace-access";
 import type {
   PaymentLinkListItem,
@@ -279,7 +280,7 @@ export async function getPaymentLinkById(
 export async function getPaymentLinkBySlug(
   slug: string,
 ): Promise<PaymentLinkRecord | null> {
-  if (!isDatabaseConfigured()) return null;
+  if (!isDatabaseConfigured() || !isCompanyComplete()) return null;
 
   const db = getDb();
   const [row] = await db

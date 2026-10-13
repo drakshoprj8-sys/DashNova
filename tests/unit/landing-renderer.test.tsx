@@ -86,7 +86,7 @@ beforeEach(() => {
 });
 
 describe("LandingRenderer", () => {
-  it("usa o cabeçalho e o rodapé PCDIGA em qualquer landing page", () => {
+  it("usa a marca da própria landing page no cabeçalho e no rodapé", () => {
     render(
       <LandingRenderer
         snapshot={snapshotWith([
@@ -100,9 +100,10 @@ describe("LandingRenderer", () => {
       />,
     );
 
-    const logo = screen.getByRole("img", { name: "PCDIGA" });
-    expect(logo.getAttribute("src")).toBe("/brand/pcdiga.svg");
-    expect(screen.getByText(/PCDIGA · Pagamento seguro/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Loja Teste" })).toBeTruthy();
+    expect(screen.getAllByText("Loja Teste").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Loja Teste · Pagamento seguro/)).toBeTruthy();
+    expect(screen.queryByText(/PCDIGA/i)).toBeNull();
     expect(screen.queryByText("Rodapé antigo")).toBeNull();
     expect(screen.getByRole("link", { name: "Termos" })).toBeTruthy();
   });

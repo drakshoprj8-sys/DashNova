@@ -339,7 +339,10 @@ function AnnouncementBlock({ block }: { block: LandingBlock }) {
 }
 
 function StandardLandingHeader() {
-  const { product } = useRuntime();
+  const { product, snapshot } = useRuntime();
+  const publicName = snapshot.publicName.trim() || STANDARD_STOREFRONT.name;
+  const logoUrl = snapshot.logoUrl?.trim() || STANDARD_STOREFRONT.logoUrl;
+
   return (
     <header
       className="z-30 flex min-h-20 items-center justify-center px-4 py-5 md:min-h-24 md:py-6"
@@ -348,14 +351,20 @@ function StandardLandingHeader() {
       <a
         href={product ? `/p/${product.slug}` : "#comprar"}
         className="flex items-center justify-center"
-        aria-label={STANDARD_STOREFRONT.name}
+        aria-label={publicName}
       >
-        <Img
-          src={STANDARD_STOREFRONT.logoUrl}
-          alt={STANDARD_STOREFRONT.name}
-          priority
-          className="h-9 w-auto max-w-[220px] object-contain md:h-11"
-        />
+        {logoUrl ? (
+          <Img
+            src={logoUrl}
+            alt={publicName}
+            priority
+            className="h-9 w-auto max-w-[220px] object-contain md:h-11"
+          />
+        ) : (
+          <span className="max-w-[280px] truncate text-2xl font-black tracking-tight text-white md:text-3xl">
+            {publicName}
+          </span>
+        )}
       </a>
     </header>
   );
@@ -2104,12 +2113,15 @@ function FormBlock({ block }: { block: LandingBlock }) {
 }
 
 function StandardLandingFooter() {
+  const { snapshot } = useRuntime();
+  const publicName = snapshot.publicName.trim() || STANDARD_STOREFRONT.name;
+
   return (
     <footer className="border-t border-zinc-200 bg-white px-4 py-5 text-center text-xs text-zinc-500">
       <div className="mx-auto w-full max-w-6xl">
         <p>
-          © {new Date().getFullYear()} {STANDARD_STOREFRONT.name} · Pagamento
-          seguro por MB WAY e Multibanco
+          © {new Date().getFullYear()} {publicName} · Pagamento seguro por MB
+          WAY e Multibanco
         </p>
         <nav className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
           <a href="/legal/termos" className="hover:text-zinc-800">

@@ -68,7 +68,7 @@ export default async function ConfiguracoesPage() {
 
   const services: ServiceStatus[] = [
     {
-      name: "Supabase (banco, auth, realtime)",
+      name: "Supabase (banco e autenticação)",
       description: "Necessário para login real, dados e RLS",
       configured: isSupabaseConfigured(),
       envVars: ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"],
@@ -77,10 +77,10 @@ export default async function ConfiguracoesPage() {
       name: "Acesso restrito ao dono",
       description: isOwnerAllowlistEnabled()
         ? `Somente ${ownerEmails.join(", ")} pode entrar no painel.`
-        : "Sem allowlist: qualquer conta criada no seu Supabase consegue entrar. Preencha OWNER_EMAILS com o seu e-mail.",
+        : "OWNER_EMAILS ausente: o acesso é negado em produção. Preencha com o e-mail do proprietário.",
       configured: isOwnerAllowlistEnabled(),
       envVars: ["OWNER_EMAILS"],
-      statusLabels: { on: "Restrito a você", off: "Aberto — configure já" },
+      statusLabels: { on: "Restrito a você", off: "Bloqueado — configure" },
     },
     {
       name: "Resend (e-mails)",
@@ -114,8 +114,8 @@ export default async function ConfiguracoesPage() {
       <div>
         <h2 className="text-xl font-bold tracking-tight">Configurações</h2>
         <p className="text-muted-foreground text-sm">
-          Status das credenciais de serviços externos. As páginas completas de
-          configuração de cada integração serão construídas nas fases 4 e 7.
+          Status das credenciais necessárias para operar o painel e as
+          integrações externas.
         </p>
       </div>
 

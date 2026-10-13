@@ -8,7 +8,7 @@ import {
   normalizeEmail,
   normalizePhone,
 } from "@/features/customers/customer-utils";
-import { checkRateLimit } from "@/features/landing-pages/events";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -39,15 +39,23 @@ export async function POST(request: Request) {
 
   try {
     const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "sem-ip";
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      request.headers.get("x-real-ip") ??
+      "unknown-client";
 
-    if (!checkRateLimit(`lead:${ip}`)) {
+    const limit = await rateLimit({
+      namespace: "landing-leads",
+      identifier: ip,
+      limit: 10,
+      windowSeconds: 600,
+    });
+    if (!limit.allowed) {
       return NextResponse.json(
         {
           ok: false,
           error: "Demasiados envios. Tente novamente daqui a pouco.",
         },
-        { status: 429 },
+        { status: 429, headers: { "Retry-After": "600" } },
       );
     }
 

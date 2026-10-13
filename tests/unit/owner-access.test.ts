@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getOwnerEmails,
@@ -10,6 +10,7 @@ import { isDemoModeAllowed } from "@/lib/supabase/config";
 afterEach(() => {
   delete process.env.OWNER_EMAILS;
   delete process.env.ALLOW_DEMO_MODE;
+  vi.unstubAllEnvs();
 });
 
 describe("getOwnerEmails", () => {
@@ -38,8 +39,13 @@ describe("isOwnerEmail", () => {
     expect(isOwnerEmail(undefined)).toBe(false);
   });
 
-  it("sem allowlist configurada não bloqueia ninguém", () => {
+  it("sem allowlist permite a configuração inicial fora de produção", () => {
     expect(isOwnerEmail("qualquer@exemplo.com")).toBe(true);
+  });
+
+  it("sem allowlist nega acesso em produção", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    expect(isOwnerEmail("qualquer@exemplo.com")).toBe(false);
   });
 });
 
@@ -54,5 +60,11 @@ describe("isDemoModeAllowed", () => {
 
     process.env.ALLOW_DEMO_MODE = "true";
     expect(isDemoModeAllowed()).toBe(true);
+  });
+
+  it("permanece desligado em produção mesmo com a flag true", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    process.env.ALLOW_DEMO_MODE = "true";
+    expect(isDemoModeAllowed()).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/database/client";
+import { isCompanyComplete } from "@/lib/company";
 import { checkouts, orders, products } from "@/database/schema";
 import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 import { STANDARD_STOREFRONT } from "@/features/storefront/standard-brand";
@@ -133,16 +134,16 @@ export interface PublicCheckout {
 
 /**
  * Resolve um checkout publicado pelo slug, para a rota pública.
- * Devolve null quando não existe ou não está publicado — nesse caso a
- * rota cai no comportamento antigo (slug do produto).
+ * Devolve null quando não existe ou não está publicado.
  */
 export async function getPublishedCheckoutBySlug(
   slug: string,
 ): Promise<PublicCheckout | null> {
-  if (!isDatabaseConfigured()) return null;
+  if (!isDatabaseConfigured() || !isCompanyComplete()) return null;
 
   try {
     const db = getDb();
+    const workspaceId = await getOrCreateDefaultWorkspace();
     const rows = await db
       .select({
         id: checkouts.id,
@@ -155,6 +156,7 @@ export async function getPublishedCheckoutBySlug(
       .innerJoin(products, eq(checkouts.mainProductId, products.id))
       .where(
         and(
+          eq(checkouts.workspaceId, workspaceId),
           eq(checkouts.slug, slug),
           eq(checkouts.status, "published"),
           isNull(checkouts.deletedAt),
@@ -176,6 +178,54 @@ export async function getPublishedCheckoutBySlug(
     };
   } catch (error) {
     console.error("[checkouts] erro ao resolver checkout público:", error);
+    return null;
+  }
+}
+
+/** Checkout publicado mais recente que vende um produto ativo. */
+export async function getPublishedCheckoutForProductSlug(
+  productSlug: string,
+): Promise<PublicCheckout | null> {
+  if (!isDatabaseConfigured() || !isCompanyComplete()) return null;
+
+  try {
+    const db = getDb();
+    const workspaceId = await getOrCreateDefaultWorkspace();
+    const [row] = await db
+      .select({
+        id: checkouts.id,
+        slug: checkouts.slug,
+        productSlug: products.slug,
+        paymentMethods: checkouts.paymentMethods,
+        config: checkouts.config,
+      })
+      .from(checkouts)
+      .innerJoin(products, eq(checkouts.mainProductId, products.id))
+      .where(
+        and(
+          eq(checkouts.workspaceId, workspaceId),
+          eq(products.slug, productSlug),
+          eq(products.status, "active"),
+          isNull(products.deletedAt),
+          eq(checkouts.status, "published"),
+          isNull(checkouts.deletedAt),
+        ),
+      )
+      .orderBy(desc(checkouts.publishedAt), desc(checkouts.updatedAt))
+      .limit(1);
+
+    if (!row) return null;
+    return {
+      id: row.id,
+      slug: row.slug,
+      productSlug: row.productSlug,
+      paymentMethods: Array.isArray(row.paymentMethods)
+        ? (row.paymentMethods as string[])
+        : [],
+      theme: parseCheckoutTheme(row.config),
+    };
+  } catch (error) {
+    console.error("[checkouts] erro ao resolver checkout do produto:", error);
     return null;
   }
 }

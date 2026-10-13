@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CheckCircle2 } from "lucide-react";
 
 import { loginAction } from "@/features/auth/actions";
 import { AuthForm } from "@/features/auth/auth-form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -19,6 +21,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
   const searchParams = await props.searchParams;
   const redirect =
     typeof searchParams.redirect === "string" ? searchParams.redirect : "";
+  const passwordReset = searchParams.passwordReset === "success";
 
   return (
     <Card>
@@ -29,6 +32,14 @@ export default async function LoginPage(props: PageProps<"/login">) {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {passwordReset && (
+          <Alert variant="success" className="mb-4">
+            <CheckCircle2 />
+            <AlertDescription>
+              Senha atualizada. Entre novamente com a nova senha.
+            </AlertDescription>
+          </Alert>
+        )}
         <AuthForm action={loginAction} submitLabel="Entrar">
           <input type="hidden" name="redirect" value={redirect} />
           <div className="space-y-2">

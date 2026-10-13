@@ -115,7 +115,7 @@ export function TopProducts({ products, currency }: TopProductsProps) {
                 className="min-w-0 border-b border-white/[0.06] p-4 last:border-b-0 sm:border-r sm:[&:nth-child(even)]:border-r-0 xl:border-b-0 xl:border-r xl:[&:nth-child(even)]:border-r xl:last:border-r-0"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-[#5f6b7d]">
+                  <span className="text-xs font-semibold text-[#8d98a8]">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                   <div className="relative size-10 shrink-0 overflow-hidden rounded-md bg-white/[0.05]">
@@ -143,7 +143,7 @@ export function TopProducts({ products, currency }: TopProductsProps) {
                     <p className="text-base font-semibold text-[#f7f9fc]">
                       {formatMoney(product.revenueCents, currency, "pt-BR")}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-[#6f7b8d]">
+                    <p className="mt-0.5 text-[11px] text-[#8d98a8]">
                       {formatNumber(product.units)}{" "}
                       {product.units === 1 ? "vendido" : "vendidos"}
                     </p>

@@ -8,6 +8,7 @@ import { getDb, isDatabaseConfigured } from "@/database/client";
 import { landingPages, landingPageVersions } from "@/database/schema";
 import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 import { getSession } from "@/lib/auth/session";
+import { isCompanyComplete } from "@/lib/company";
 import { recordAuditLog } from "@/features/audit/log";
 import {
   createLandingPageSchema,
@@ -452,6 +453,13 @@ export async function publishLandingPageAction(
     return { ok: false, error: parsed.error.issues[0].message };
   }
   if (!isDatabaseConfigured()) return NO_DB;
+  if (!isCompanyComplete()) {
+    return {
+      ok: false,
+      error:
+        "Preencha os dados legais e o e-mail de apoio antes de publicar páginas.",
+    };
+  }
 
   const context = await requireWorkspace();
   if (!context)
@@ -618,6 +626,13 @@ export async function pauseLandingPageAction(
   const id = String(formData.get("id") ?? "");
   const resume = formData.get("resume") === "true";
   if (!id || !isDatabaseConfigured()) return NO_DB;
+  if (resume && !isCompanyComplete()) {
+    return {
+      ok: false,
+      error:
+        "Preencha os dados legais e o e-mail de apoio antes de recolocar a página no ar.",
+    };
+  }
 
   const context = await requireWorkspace();
   if (!context) return { ok: false, error: "Sessão expirada." };

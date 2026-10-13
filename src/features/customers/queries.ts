@@ -249,6 +249,12 @@ function filteredWhere(filters: CustomerListFilters) {
     )`);
   }
   if (filters.type === "buyer") conditions.push(sql`b.paid_count > 0`);
+  if (filters.type === "approved")
+    conditions.push(sql`(b.paid_count > 0 or b.imported_status = 'paid')`);
+  if (filters.type === "payments_pending")
+    conditions.push(
+      sql`(b.pending_count > 0 or b.imported_status = 'pending')`,
+    );
   if (filters.type === "imported_paid")
     conditions.push(sql`b.imported_status = 'paid'`);
   if (filters.type === "imported_pending")
@@ -446,6 +452,51 @@ function mapRow(row: RawRow, canViewSensitiveData = true): CustomerListRow {
   };
 }
 
+function customerStatsSelect() {
+  return sql`select
+    count(*)::int as total_contacts,
+    count(*) filter (where b.paid_count > 0 or b.imported_status = 'paid')::int as approved_contacts,
+    count(*) filter (where b.pending_count > 0 or b.imported_status = 'pending')::int as pending_contacts,
+    count(*) filter (where b.paid_count > 0)::int as buyers,
+    count(*) filter (where b.imported_status = 'paid')::int as imported_paid,
+    count(*) filter (where b.imported_status = 'pending')::int as imported_pending,
+    count(*) filter (where b.paid_count = 0 and b.imported_status is null)::int as leads,
+    count(*) filter (where b.abandoned_carts > 0)::int as abandoned_carts,
+    count(*) filter (where b.paid_count >= 2)::int as recurring,
+    count(*) filter (where b.pending_count > 0)::int as pending,
+    count(*) filter (where b.refused_count > 0)::int as refused,
+    coalesce(sum(b.total_spent_cents), 0)::bigint as total_spent_cents,
+    coalesce((array_agg(b.currency order by b.paid_count desc))[1], 'EUR') as currency
+    from base b`;
+}
+
+function mapCustomerStats(row: RawRow): CustomerStats {
+  return {
+    totalContacts: numberValue(row.total_contacts),
+    approvedContacts: numberValue(row.approved_contacts),
+    pendingContacts: numberValue(row.pending_contacts),
+    buyers: numberValue(row.buyers),
+    importedPaid: numberValue(row.imported_paid),
+    importedPending: numberValue(row.imported_pending),
+    leads: numberValue(row.leads),
+    abandonedCarts: numberValue(row.abandoned_carts),
+    recurring: numberValue(row.recurring),
+    pending: numberValue(row.pending),
+    refused: numberValue(row.refused),
+    totalSpentCents: numberValue(row.total_spent_cents),
+    currency: stringValue(row.currency, "EUR"),
+  };
+}
+
+/** The dashboard needs totals, without fetching contact rows or facets. */
+export async function getCustomerStats(): Promise<CustomerStats> {
+  const { workspaceId } = await requireCustomerPermission("view");
+  const result = await getDb().execute(
+    sql`${customerBaseCte(workspaceId)} ${customerStatsSelect()}`,
+  );
+  return mapCustomerStats((result as unknown as RawRow[])[0] ?? {});
+}
+
 export async function listCustomers(
   filters: CustomerListFilters,
 ): Promise<CustomerListResponse> {
@@ -467,21 +518,7 @@ export async function listCustomers(
       db.execute(sql`${base}
       select count(*)::int as total from base b where ${where}
     `),
-      db.execute(sql`${base}
-      select
-        count(*)::int as total_contacts,
-        count(*) filter (where b.paid_count > 0)::int as buyers,
-        count(*) filter (where b.imported_status = 'paid')::int as imported_paid,
-        count(*) filter (where b.imported_status = 'pending')::int as imported_pending,
-        count(*) filter (where b.paid_count = 0 and b.imported_status is null)::int as leads,
-        count(*) filter (where b.abandoned_carts > 0)::int as abandoned_carts,
-        count(*) filter (where b.paid_count >= 2)::int as recurring,
-        count(*) filter (where b.pending_count > 0)::int as pending,
-        count(*) filter (where b.refused_count > 0)::int as refused,
-        coalesce(sum(b.total_spent_cents), 0)::bigint as total_spent_cents,
-        coalesce((array_agg(b.currency order by b.paid_count desc))[1], 'EUR') as currency
-      from base b
-    `),
+      db.execute(sql`${base} ${customerStatsSelect()}`),
       db.execute(sql`${base}
       select
         coalesce(jsonb_agg(distinct b.country) filter (where b.country is not null), '[]'::jsonb) as countries,
@@ -507,19 +544,7 @@ export async function listCustomers(
   const statsRow = (statsResult as unknown as RawRow[])[0] ?? {};
   const facetsRow = (facetsResult as unknown as RawRow[])[0] ?? {};
   const total = numberValue(countRow.total);
-  const stats: CustomerStats = {
-    totalContacts: numberValue(statsRow.total_contacts),
-    buyers: numberValue(statsRow.buyers),
-    importedPaid: numberValue(statsRow.imported_paid),
-    importedPending: numberValue(statsRow.imported_pending),
-    leads: numberValue(statsRow.leads),
-    abandonedCarts: numberValue(statsRow.abandoned_carts),
-    recurring: numberValue(statsRow.recurring),
-    pending: numberValue(statsRow.pending),
-    refused: numberValue(statsRow.refused),
-    totalSpentCents: numberValue(statsRow.total_spent_cents),
-    currency: stringValue(statsRow.currency, "EUR"),
-  };
+  const stats = mapCustomerStats(statsRow);
   const facets: CustomerFacets = {
     countries: stringArray(facetsRow.countries).sort(),
     states: stringArray(facetsRow.states).sort(),

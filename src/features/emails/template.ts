@@ -4,17 +4,16 @@ interface LegacyEmailBrand {
 }
 
 export const DEFAULT_CAMPAIGN_TEMPLATE = {
-  subject: "{{PRIMEIRO_NOME}}, confirme os dados do seu pedido",
-  preheader:
-    "Retome o seu pedido e confirme os dados de entrega em poucos segundos.",
-  headerName: "",
-  title: "Atualização do seu pedido",
-  body: "Olá {{PRIMEIRO_NOME}},\n\nO seu pedido encontra-se pendente de conclusão. Para continuar, confirme os dados no botão abaixo apenas se reconhecer esta compra.",
-  articleName: "O seu Produto",
-  ctaLabel: "Continuar para o Pagamento",
-  ctaUrl: "https://suaempresa.site/pagar/6bzge2a64e",
+  subject: "PCCGVIP — informações do pedido {{PEDIDO}}",
+  preheader: "Referência, artigo e valor registados no seu pedido à PCCGVIP.",
+  headerName: "PCCGVIP",
+  title: "Informações do pedido na PCCGVIP",
+  body: "Olá {{PRIMEIRO_NOME}},\n\nSomos a equipa da PCCGVIP. Esta mensagem apresenta os dados registados no seu pedido {{PEDIDO}}.\n\nValor do pedido: {{VALOR}}.\n\nSe precisa de informações, contacte o apoio da nossa loja com a referência do pedido. Se não reconhece a PCCGVIP ou este pedido, desconsidere esta mensagem.",
+  articleName: "{{PRODUTO}}",
+  ctaLabel: "Ver pedido",
+  ctaUrl: "{{CHECKOUT_URL}}",
   fallbackText:
-    "Se o botão não funcionar, copie e cole o seguinte endereço na barra do navegador:",
+    "Se o botão não funcionar, copie o endereço abaixo no navegador.",
 } as const;
 
 export const EMAIL_VARIABLES = [
@@ -24,7 +23,7 @@ export const EMAIL_VARIABLES = [
   { token: "{{PRODUTO}}", label: "Produto" },
   { token: "{{PEDIDO}}", label: "Numero do pedido" },
   { token: "{{VALOR}}", label: "Valor do pedido" },
-  { token: "{{CHECKOUT_URL}}", label: "Link para concluir" },
+  { token: "{{CHECKOUT_URL}}", label: "Link do pedido" },
   { token: "{{LOJA_URL}}", label: "Endereco da loja" },
 ] as const;
 
@@ -51,6 +50,7 @@ export interface CampaignTemplateContent {
 
 const VARIABLE_ALIASES: Record<string, keyof CampaignTemplateVars> = {
   NOME: "nome",
+  NOME_CLIENTE: "nome",
   PRIMEIRO_NOME: "primeiroNome",
   EMAIL: "email",
   PRODUTO: "produto",
@@ -161,8 +161,11 @@ export function buildCampaignHtml(input: {
     input.vars,
   );
   const hasCtaUrl = validHttpUrl(ctaUrl);
+  const hasOrder = Boolean(
+    input.vars.pedido.trim() && input.vars.pedido !== "o seu pedido",
+  );
   const checkoutButton = hasCtaUrl
-    ? `<p style="margin:26px 0 18px;line-height:1.65">Para continuar com o pedido, confirme os seus dados através do botão abaixo:</p>
+    ? `<p style="margin:26px 0 18px;line-height:1.65">Use o botão abaixo para continuar:</p>
 <div style="margin:0 0 28px;text-align:center"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#cc0000;color:#ffffff;text-decoration:none;padding:15px 28px;border-radius:4px;font-weight:700">${escapeHtml(ctaLabel)}</a></div>
 <p style="margin:0 0 26px;line-height:1.55;color:#4b5563;font-size:12px">${escapeHtml(fallbackText)}<br><a href="${escapeHtml(ctaUrl)}" style="color:#cc0000;word-break:break-all">${escapeHtml(ctaUrl)}</a></p>`
     : "";
@@ -173,14 +176,18 @@ export function buildCampaignHtml(input: {
 ${headerName ? `<p style="margin:0 0 10px;font-size:18px;font-weight:700;line-height:1.3;color:#cc0000">${escapeHtml(headerName)}</p>` : ""}
 <p style="margin:0 0 24px;color:#4b5563;font-size:14px">${escapeHtml(title)}</p>
 ${paragraphs}
-<div style="margin:22px 0 24px;background:#f7f7f7;padding:22px 24px;line-height:1.65">
-<strong>Encomenda:</strong> ${escapeHtml(input.vars.pedido)}<br><strong>Artigo:</strong> ${escapeHtml(articleName)}
-</div>
+${
+  hasOrder
+    ? `<div style="margin:22px 0 24px;background:#f7f7f7;padding:22px 24px;line-height:1.65">
+<strong>Encomenda:</strong> ${escapeHtml(input.vars.pedido)}${input.vars.produto.trim() && input.vars.produto !== "o seu produto" ? `<br><strong>Artigo:</strong> ${escapeHtml(articleName)}` : ""}
+</div>`
+    : ""
+}
 ${checkoutButton}
-<p style="margin:0;line-height:1.65">Depois da confirmação, o pedido poderá prosseguir normalmente.</p>
+<p style="margin:0;line-height:1.65">Se tiver dúvidas, contacte o apoio da PCCGVIP.</p>
 </div>
 <div style="border-top:1px solid #e5e7eb;padding:20px 32px;text-align:left">
-<p style="margin:0;font-size:12px;line-height:1.6;color:#4b5563">Este e-mail foi enviado porque existe uma compra iniciada associada a este endereço.<br>Para deixar de receber, responda a este e-mail com "REMOVER".</p>
+<p style="margin:0;font-size:12px;line-height:1.6;color:#4b5563">Mensagem da PCCGVIP.<br>Para deixar de receber, contacte o apoio da nossa loja.</p>
 </div>
 </div></body></html>`;
 }

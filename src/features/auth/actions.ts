@@ -6,7 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { isOwnerEmail } from "@/lib/auth/owner";
 import { getAppUrl } from "@/lib/app-url";
-import { loginSchema, forgotPasswordSchema } from "@/validations/auth";
+import { safeInternalPath } from "@/lib/path-security";
+import {
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "@/validations/auth";
 
 export interface AuthActionResult {
   ok: boolean;
@@ -59,11 +64,7 @@ export async function loginAction(
   }
 
   const redirectTo = formData.get("redirect");
-  redirect(
-    typeof redirectTo === "string" && redirectTo.startsWith("/")
-      ? redirectTo
-      : "/dashboard",
-  );
+  redirect(safeInternalPath(redirectTo, "/dashboard"));
 }
 
 /**
@@ -102,7 +103,7 @@ export async function forgotPasswordAction(
   const appUrl = getAppUrl();
   const { error } = await supabase.auth.resetPasswordForEmail(
     parsed.data.email,
-    { redirectTo: `${appUrl}/auth/redefinir-senha` },
+    { redirectTo: `${appUrl}/auth/confirm?next=/redefinir-senha` },
   );
 
   if (error) {
@@ -117,6 +118,55 @@ export async function forgotPasswordAction(
     message:
       "Se existir uma conta com este e-mail, você receberá um link de recuperação.",
   };
+}
+
+export async function resetPasswordAction(
+  _prev: AuthActionResult | null,
+  formData: FormData,
+): Promise<AuthActionResult> {
+  const parsed = resetPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message };
+  }
+
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: NOT_CONFIGURED_ERROR };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      ok: false,
+      error:
+        "O link de redefinição é inválido ou expirou. Solicite um novo link.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+
+  if (error) {
+    return {
+      ok: false,
+      error:
+        error.code === "weak_password"
+          ? "Escolha uma senha mais forte."
+          : "Não foi possível atualizar a senha. Solicite um novo link e tente novamente.",
+    };
+  }
+
+  await supabase.auth.signOut();
+  redirect("/login?passwordReset=success");
 }
 
 export async function logoutAction(): Promise<void> {

@@ -12,6 +12,7 @@ import { resolveLinkState } from "@/features/payment-links/types";
 import { PublicCheckout } from "@/features/payment-links/public-checkout";
 import { PixelScripts } from "@/features/pixels/pixel-scripts";
 import { isPanelHost, normalizeHost } from "@/lib/hosts";
+import { isCompanyComplete } from "@/lib/company";
 
 /**
  * Página pública de um link de pagamento.
@@ -94,6 +95,16 @@ function UnavailableScreen({
 
 export default async function PagarPage(props: PageProps<"/pagar/[slug]">) {
   const { slug } = await props.params;
+
+  if (!isCompanyComplete()) {
+    return (
+      <UnavailableScreen
+        variant="disabled"
+        customTitle="Pagamento indisponível"
+        customBody="O vendedor ainda não publicou todas as informações legais necessárias. Nenhum valor pode ser cobrado neste momento."
+      />
+    );
+  }
 
   const record = await getPaymentLinkBySlug(slug);
   if (!record) notFound();

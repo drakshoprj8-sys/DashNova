@@ -44,6 +44,12 @@ export const checkoutSchema = z
       message: "Escolha a forma de pagamento",
     }),
     quantity: z.coerce.number().int().min(1).max(10),
+    checkoutSlug: z
+      .string()
+      .trim()
+      .min(1)
+      .max(120)
+      .regex(/^[a-z0-9-]+$/, "Checkout inválido"),
     productSlug: z.string().trim().min(1),
     /**
      * Identificador público da variação escolhida (`?variant=preto`).

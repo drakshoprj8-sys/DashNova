@@ -7,6 +7,7 @@ import { getDb, isDatabaseConfigured } from "@/database/client";
 import { landingPages } from "@/database/schema";
 import { recordAuditLog } from "@/features/audit/log";
 import { requireWorkspaceAccess } from "@/lib/workspace-access";
+import { isCompanyComplete } from "@/lib/company";
 
 import type { LandingActionResult } from "../actions";
 import { deployStaticSite, isVercelConfigured } from "./vercel";
@@ -24,6 +25,14 @@ export async function deployLandingPageAction(
 ): Promise<LandingActionResult> {
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "Página inválida." };
+
+  if (!isCompanyComplete()) {
+    return {
+      ok: false,
+      error:
+        "Preencha os dados legais e o e-mail de apoio antes de fazer deploy de páginas públicas.",
+    };
+  }
 
   if (!isDatabaseConfigured()) {
     return { ok: false, error: "Banco de dados não configurado." };

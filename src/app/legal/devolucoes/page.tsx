@@ -18,14 +18,20 @@ export default function DevolucoesPage() {
       <h2>Como devolver</h2>
       <ul>
         <li>
-          Envie um e-mail para{" "}
-          <a
-            href={`mailto:${company.email}`}
-            className="text-violet-600 underline"
-          >
-            {company.email}
-          </a>{" "}
-          indicando a referência da encomenda.
+          {company.email ? (
+            <>
+              Envie um e-mail para{" "}
+              <a
+                href={`mailto:${company.email}`}
+                className="text-violet-600 underline"
+              >
+                {company.email}
+              </a>{" "}
+              indicando a referência da encomenda.
+            </>
+          ) : (
+            "Use o contacto de apoio publicado pelo vendedor e indique a referência da encomenda."
+          )}
         </li>
         <li>Receberá as instruções e a morada de devolução.</li>
         <li>

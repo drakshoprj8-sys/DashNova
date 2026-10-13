@@ -17,17 +17,23 @@ export default function TermosPage() {
       <h2>1. Identificação do vendedor</h2>
       <p>
         {identification ||
-          "[Preencher: denominação social, NIF, morada e localidade da empresa]"}
+          "Identificação do vendedor indisponível. Esta loja ainda não está pronta para aceitar encomendas."}
       </p>
       <p>
-        Contacto de apoio ao cliente:{" "}
-        <a
-          href={`mailto:${company.email}`}
-          className="text-violet-600 underline"
-        >
-          {company.email}
-        </a>
-        {company.phone ? ` · ${company.phone}` : ""}
+        {company.email ? (
+          <>
+            Contacto de apoio ao cliente:{" "}
+            <a
+              href={`mailto:${company.email}`}
+              className="text-violet-600 underline"
+            >
+              {company.email}
+            </a>
+            {company.phone ? ` · ${company.phone}` : ""}
+          </>
+        ) : (
+          "O contacto de apoio será publicado antes de a loja aceitar encomendas."
+        )}
       </p>
 
       <h2>2. Objeto</h2>
@@ -56,10 +62,9 @@ export default function TermosPage() {
 
       <h2>4. Pagamento</h2>
       <p>
-        Os pagamentos são processados por MB WAY e Multibanco através de um
-        prestador de serviços de pagamento licenciado na União Europeia. Não
-        recolhemos nem armazenamos credenciais bancárias ou códigos de
-        autenticação do cliente.
+        Os pagamentos são processados pelos métodos e pelo prestador
+        configurados pelo vendedor. A loja não recolhe nem armazena credenciais
+        bancárias ou códigos de autenticação do cliente.
       </p>
 
       <h2>5. Entrega</h2>

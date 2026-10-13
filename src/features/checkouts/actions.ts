@@ -6,6 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { getDb, isDatabaseConfigured } from "@/database/client";
 import { checkouts, products } from "@/database/schema";
 import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
+import { isCompanyComplete } from "@/lib/company";
 import { recordAuditLog } from "@/features/audit/log";
 import {
   createCheckoutSchema,
@@ -37,6 +38,14 @@ export async function createCheckoutAction(
 
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0].message };
+  }
+
+  if (parsed.data.publishNow && !isCompanyComplete()) {
+    return {
+      ok: false,
+      error:
+        "Preencha os dados legais e o e-mail de apoio antes de publicar o checkout.",
+    };
   }
 
   if (!isDatabaseConfigured()) {
@@ -193,6 +202,7 @@ export async function toggleCheckoutStatusAction(
   const id = String(formData.get("id") ?? "");
   const publish = formData.get("publish") === "true";
   if (!id || !isDatabaseConfigured()) return;
+  if (publish && !isCompanyComplete()) return;
 
   const db = getDb();
   const workspaceId = await getOrCreateDefaultWorkspace();

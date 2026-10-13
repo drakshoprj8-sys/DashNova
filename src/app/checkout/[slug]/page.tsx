@@ -19,6 +19,7 @@ import {
   listCheckoutVariants,
   pickDefaultVariant,
 } from "@/features/variants/resolve";
+import { isCompanyComplete } from "@/lib/company";
 
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getWorkspaceBranding();
@@ -30,13 +31,14 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * Checkout público (/checkout/[slug]).
  *
- * O slug resolve primeiro para um checkout publicado (criado no painel);
- * se não existir, cai para o slug do produto — mantendo os links antigos
- * a funcionar.
+ * O slug precisa resolver para um checkout publicado criado no painel.
+ * Produtos ativos sem um checkout publicado não aceitam pagamentos.
  */
 export default async function CheckoutSlugPage(
   props: PageProps<"/checkout/[slug]">,
 ) {
+  if (!isCompanyComplete()) notFound();
+
   const { slug } = await props.params;
   const searchParams = await props.searchParams;
 
@@ -46,7 +48,15 @@ export default async function CheckoutSlugPage(
     getWorkspaceBranding(),
   ]);
 
-  const product = await getProductBySlug(checkout?.productSlug ?? slug);
+  if (!checkout) notFound();
+
+  const paymentMethods = checkout.paymentMethods.filter(
+    (method): method is "mbway" | "multibanco" =>
+      method === "mbway" || method === "multibanco",
+  );
+  if (paymentMethods.length === 0) notFound();
+
+  const product = await getProductBySlug(checkout.productSlug);
   if (!product) notFound();
 
   const qtyRaw = Number(
@@ -125,6 +135,8 @@ export default async function CheckoutSlugPage(
       <main>
         <CheckoutForm
           product={product}
+          checkoutSlug={checkout.slug}
+          paymentMethods={paymentMethods}
           initialQuantity={quantity}
           shippingMethods={shippingMethods}
           theme={theme}

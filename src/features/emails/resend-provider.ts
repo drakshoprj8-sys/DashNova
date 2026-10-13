@@ -7,6 +7,7 @@ export interface SendEmailInput {
   subject: string;
   html: string;
   replyTo?: string;
+  unsubscribeUrl?: string;
   idempotencyKey?: string;
 }
 
@@ -23,6 +24,27 @@ export interface SendEmailBatchResult {
 }
 
 let resendClient: Resend | null = null;
+
+function campaignOptions(input: SendEmailInput) {
+  if (!input.unsubscribeUrl) return { html: input.html };
+  const url = new URL(input.unsubscribeUrl);
+  if (url.protocol !== "https:") throw new Error("O descadastro exige HTTPS.");
+  const escapedUrl = url
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;");
+  const footer = `<p style="padding:20px;text-align:center;font:12px Arial,sans-serif;color:#666">Para deixar de receber campanhas da loja, <a href="${escapedUrl}">cancelar inscrição</a>.</p>`;
+  const html = /<\/body\s*>/i.test(input.html)
+    ? input.html.replace(/<\/body\s*>/i, `${footer}</body>`)
+    : input.html + footer;
+  return {
+    html,
+    headers: {
+      "List-Unsubscribe": `<${url}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  };
+}
 
 function getResend(): Resend {
   const apiKey = process.env.RESEND_API_KEY;
@@ -66,7 +88,7 @@ export async function sendEmail(
         from: process.env.RESEND_FROM_EMAIL!,
         to: input.to,
         subject: input.subject,
-        html: input.html,
+        ...campaignOptions(input),
         ...(input.replyTo ? { replyTo: input.replyTo } : {}),
       },
       input.idempotencyKey
@@ -105,7 +127,7 @@ export async function sendEmailBatch(
         from: process.env.RESEND_FROM_EMAIL!,
         to: input.to,
         subject: input.subject,
-        html: input.html,
+        ...campaignOptions(input),
         ...(input.replyTo ? { replyTo: input.replyTo } : {}),
       })),
       { idempotencyKey },
@@ -145,9 +167,25 @@ export async function testResendConnection(): Promise<{
   }
 
   try {
-    const { error } = await getResend().domains.list();
+    const { data, error } = await getResend().domains.list({ limit: 100 });
     if (error) return { ok: false, message: providerError(error) };
-    return { ok: true, message: "Ligação ao Resend validada." };
+    const sender = process.env.RESEND_FROM_EMAIL!.trim();
+    const address = sender.match(/<([^<>]+)>$/)?.[1] ?? sender;
+    const senderDomain = address.split("@")[1]?.toLowerCase();
+    const domain = data?.data.find(
+      (item) => item.name.toLowerCase() === senderDomain,
+    );
+    if (!domain || domain.status !== "verified") {
+      return {
+        ok: false,
+        message:
+          "A chave respondeu, mas o domínio do remetente não está verificado nesta conta Resend. Confira RESEND_FROM_EMAIL e Domains no Resend.",
+      };
+    }
+    return {
+      ok: true,
+      message: `Conexão validada; domínio ${domain.name} verificado. Nenhum e-mail foi enviado.`,
+    };
   } catch (error) {
     return { ok: false, message: providerError(error) };
   }

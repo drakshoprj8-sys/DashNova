@@ -2,41 +2,43 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 import { isPanelHost, isStorePath, normalizeHost } from "@/lib/hosts";
+import { isOwnerEmail } from "@/lib/auth/owner";
+import { isPathAtOrBelow } from "@/lib/path-security";
+import { isDemoModeAllowed } from "@/lib/supabase/config";
 
-const PUBLIC_PREFIXES = [
+const PUBLIC_PATHS = [
   "/login",
   "/cadastro",
   "/recuperar-senha",
+  "/redefinir-senha",
   "/auth",
-  "/p/",
-  "/lp/",
-  "/pay/",
+  "/p",
+  "/lp",
   // Página pública de um link de pagamento — quem vai pagar não tem sessão.
-  "/pagar/",
-  "/checkout/",
-  "/loja",
+  "/pagar",
+  "/checkout",
+  "/obrigado",
+  "/acompanhar",
+  "/legal",
   "/api/public",
   // Rotas de cron não têm sessão do painel. Cada uma valida CRON_SECRET.
-  "/api/cron/",
+  "/api/cron",
   // Webhooks NUNCA podem exigir sessão: são chamados por servidores
   // externos (Broski, Resend...). A autenticidade é garantida pela
   // verificação de assinatura HMAC dentro de cada rota.
-  "/api/webhooks/",
+  "/api/webhooks",
 ];
 
 export function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return false; // raiz redireciona para o painel
-  return PUBLIC_PREFIXES.some(
-    (prefix) =>
-      pathname === prefix.replace(/\/$/, "") || pathname.startsWith(prefix),
-  );
+  return PUBLIC_PATHS.some((path) => isPathAtOrBelow(pathname, path));
 }
 
 /**
  * Proxy (Next 16, antigo middleware): separa os domínios das lojas do
  * domínio do painel, renova a sessão Supabase e protege as rotas
- * administrativas. Sem Supabase configurado, o painel abre em modo
- * demonstração (banner explícito na UI) — nada finge estar conectado.
+ * administrativas. Sem Supabase configurado, as rotas protegidas falham
+ * fechadas; o painel só abre sem sessão com ALLOW_DEMO_MODE=true.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -57,9 +59,19 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Modo demonstração: sem credenciais não há sessão a renovar.
+  // Rotas públicas continuam acessíveis para explicar a configuração ou
+  // receber callbacks. Rotas protegidas só abrem sem Supabase quando o modo
+  // demonstração foi habilitado explicitamente.
   if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.next();
+    if (isPublicPath(pathname) || isDemoModeAllowed()) {
+      return NextResponse.next();
+    }
+
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
   }
 
   let response = NextResponse.next({ request });
@@ -85,15 +97,17 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const ownerAuthorized = Boolean(user && isOwnerEmail(user.email));
 
-  if (!user && !isPublicPath(pathname)) {
+  if (!ownerAuthorized && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (user && (pathname === "/login" || pathname === "/cadastro")) {
+  if (ownerAuthorized && (pathname === "/login" || pathname === "/cadastro")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";

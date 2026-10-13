@@ -436,7 +436,7 @@ export async function getDashboardSnapshot(
       count: countOf("checkout_opened"),
     },
     {
-      label: "Pagamento aprovado",
+      label: "Pagamento gerado",
       event: "payment_created",
       count: countOf("payment_created"),
     },

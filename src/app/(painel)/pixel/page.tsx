@@ -21,7 +21,6 @@ import { UtmifyPage } from "@/features/pixels/utmify-page";
 import { PixelTabs } from "@/features/pixels/meta/pixel-tabs";
 import { listLandingPages } from "@/features/landing-pages/queries";
 import { getAppUrl } from "@/lib/app-url";
-import { alphaGamerNebula } from "@/features/landing/technebula-data";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -231,12 +230,16 @@ function PixelGeneralTab({
         <CardContent className="space-y-2 text-sm">
           {[
             {
-              label: "Landing page",
-              url: `${appUrl}/p/${alphaGamerNebula.slug}`,
+              label: "Landing do editor",
+              url: `${appUrl}/lp/<slug>`,
             },
             {
-              label: "Checkout",
-              url: `${appUrl}/checkout/${alphaGamerNebula.slug}`,
+              label: "Página de produto",
+              url: `${appUrl}/p/<slug-do-produto>`,
+            },
+            {
+              label: "Checkout publicado",
+              url: `${appUrl}/checkout/<slug-do-checkout>`,
             },
           ].map((p) => (
             <div
