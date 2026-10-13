@@ -499,7 +499,9 @@ export function CarrinhosView({ products }: { products: ProductOption[] }) {
       toast.error("Nenhum cliente válido nos carrinhos selecionados.");
       return;
     }
-    router.push(`/emails?recipients=${Array.from(ids).join(",")}`);
+    router.push(
+      `/emails?segment=pending&recipients=${Array.from(ids).join(",")}`,
+    );
   }
 
   function toggleSelect(orderId: string) {

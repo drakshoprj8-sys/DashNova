@@ -71,7 +71,7 @@ export default async function EmailsPage({
     (segment) => segment.key === requestedSegment,
   )
     ? (requestedSegment as Exclude<SegmentKey, "custom">)
-    : "pending";
+    : "imported_paid";
   const customerIds = (recipientsParamRaw ?? "")
     .split(",")
     .map((value) => value.trim())
@@ -119,9 +119,9 @@ export default async function EmailsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-xl font-bold">Emails</h2>
+          <h2 className="text-xl font-bold">Disparo de emails</h2>
           <p className="text-muted-foreground text-sm">
-            Comunicados da PCCGVIP e notificações dos pedidos da loja
+            Personalize sua mensagem e escolha os clientes da sua base.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -152,7 +152,7 @@ export default async function EmailsPage({
         </Alert>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {summary.map((item) => (
           <Card key={item.label}>
             <CardContent className="flex items-center justify-between p-4">
@@ -161,7 +161,7 @@ export default async function EmailsPage({
                   {item.label}
                 </p>
                 <p className="mt-1 text-2xl font-bold tabular-nums">
-                  {item.value}
+                  {formatNumber(item.value)}
                 </p>
               </div>
               <item.icon className="text-muted-foreground size-5" />
@@ -176,19 +176,19 @@ export default async function EmailsPage({
         spam.
       </p>
 
-      {requestedSource === "clientes" && initialSegment === "paid" && (
-        <Alert variant="success">
-          <CheckCircle2 />
-          <AlertTitle>Clientes pagantes pré-selecionados</AlertTitle>
-          <AlertDescription>
-            O público Pedidos pagos foi selecionado com{" "}
-            {formatNumber(consolidatedCustomerCounts.importedPaid)} pagos
-            informados na aba Clientes; {formatNumber(counts.paid)} têm
-            consentimento ativo. O envio ainda verifica o domínio de e-mail e o
-            intervalo de 24 horas. Bloqueados e descadastrados são excluídos.
-          </AlertDescription>
-        </Alert>
-      )}
+      {requestedSource === "clientes" &&
+        (initialSegment === "paid" || initialSegment === "imported_paid") && (
+          <Alert variant="success">
+            <CheckCircle2 />
+            <AlertTitle>Clientes pagantes pré-selecionados</AlertTitle>
+            <AlertDescription>
+              Seus clientes pagos da outra loja estão disponíveis neste público.{" "}
+              {formatNumber(counts[initialSegment])} contatos estão
+              pré-selecionados. O envio ainda verifica o domínio de e-mail e o
+              intervalo de 24 horas. Bloqueados e descadastrados são excluídos.
+            </AlertDescription>
+          </Alert>
+        )}
 
       <CampaignForm
         counts={counts}
@@ -199,6 +199,13 @@ export default async function EmailsPage({
         initialSegment={initialSegment}
         consolidatedCustomerCount={consolidatedCustomerCounts.total}
         consolidatedPaidCustomerCount={consolidatedCustomerCounts.importedPaid}
+        audienceTotals={{
+          all: consolidatedCustomerCounts.total,
+          paid: consolidatedCustomerCounts.approved,
+          imported_paid: consolidatedCustomerCounts.importedPaid,
+          imported_pending: consolidatedCustomerCounts.importedPending,
+        }}
+        senderEmail={process.env.RESEND_FROM_EMAIL}
         initialDispatchId={crypto.randomUUID()}
       />
 

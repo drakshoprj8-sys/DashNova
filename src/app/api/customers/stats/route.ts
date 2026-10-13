@@ -1,14 +1,11 @@
 import { CustomerAccessError } from "@/features/customers/access";
-import { parseCustomerFilters } from "@/features/customers/customer-utils";
-import { listCustomers } from "@/features/customers/queries";
+import { getCustomerStats } from "@/features/customers/queries";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const filters = parseCustomerFilters(new URL(request.url).searchParams);
-    const result = await listCustomers({ ...filters, page: 1, pageSize: 20 });
-    return Response.json(result.stats);
+    return Response.json(await getCustomerStats());
   } catch (error) {
     if (error instanceof CustomerAccessError)
       return Response.json({ error: error.message }, { status: error.status });

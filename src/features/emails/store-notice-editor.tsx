@@ -24,10 +24,12 @@ export function StoreNoticeEditor({
   audience = "all",
   link,
   onLinkChange,
+  hideSubject = false,
 }: {
   value: NotificationPreferences;
   onChange: (value: NotificationPreferences) => void;
-  audience?: "all" | "paid";
+  audience?: "all" | "paid" | "imported_paid" | "imported_pending" | "custom";
+  hideSubject?: boolean;
   link?: NoticeLink;
   onLinkChange?: (link: NoticeLink) => void;
 }) {
@@ -42,7 +44,7 @@ export function StoreNoticeEditor({
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <Mail className="text-primary size-4" />
-          {audience === "paid"
+          {audience === "paid" || audience === "imported_paid"
             ? "Comunicado para clientes pagantes"
             : "Comunicado para todos os clientes"}
         </h3>
@@ -59,7 +61,7 @@ export function StoreNoticeEditor({
         </Button>
       </div>
       <p className="bg-muted/40 text-muted-foreground rounded-md border p-3 text-sm">
-        {audience === "paid"
+        {audience === "paid" || audience === "imported_paid"
           ? "Envie informações da PCCGVIP aos clientes classificados como pagos na aba Clientes, incluindo os importados."
           : "Envie informações da PCCGVIP aos contatos elegíveis da aba Clientes, incluindo quem não tem pedido."}{" "}
         Você pode incluir um botão com o link de sua escolha, mantendo o público
@@ -72,20 +74,28 @@ export function StoreNoticeEditor({
           ["headerName", "Nome no cabeçalho", 80],
           ["title", "Título interno", 160],
         ] as const
-      ).map(([field, label, limit]) => (
-        <div key={field} className="space-y-2">
-          <Label htmlFor={field}>{label}</Label>
-          <Input
-            id={field}
-            name={field}
-            value={value[field]}
-            maxLength={limit}
-            onChange={(event) =>
-              onChange({ ...value, [field]: event.target.value })
-            }
-          />
-        </div>
-      ))}
+      )
+        .filter(([field]) => !hideSubject || field !== "subject")
+        .map(([field, label, limit]) => (
+          <div key={field} className="space-y-2">
+            <Label htmlFor={field}>{label}</Label>
+            <Input
+              id={field}
+              name={field}
+              value={value[field]}
+              maxLength={limit}
+              onChange={(event) =>
+                onChange({ ...value, [field]: event.target.value })
+              }
+            />
+            {field === "headerName" ? (
+              <p className="text-muted-foreground text-xs">
+                O nome aparece no topo do email. O endereço do remetente
+                continua sendo o configurado na loja.
+              </p>
+            ) : null}
+          </div>
+        ))}
       <div className="space-y-2">
         <Label htmlFor="storeMessage">Mensagem do comunicado</Label>
         <Textarea
@@ -156,14 +166,16 @@ export function StoreNoticeEditor({
         className="flex flex-wrap gap-1.5"
         aria-label="Variáveis do comunicado"
       >
-        {["{{PRIMEIRO_NOME}}", "{{NOME}}", "{{EMAIL}}"].map((token) => (
-          <span
-            key={token}
-            className="bg-muted text-muted-foreground rounded-md px-2 py-1 font-mono text-[11px]"
-          >
-            {token}
-          </span>
-        ))}
+        {["{{PRIMEIRO_NOME}}", "{{NOME}}", "{{EMAIL}}", "{{PRODUTO}}"].map(
+          (token) => (
+            <span
+              key={token}
+              className="bg-muted text-muted-foreground rounded-md px-2 py-1 font-mono text-[11px]"
+            >
+              {token}
+            </span>
+          ),
+        )}
       </div>
       {error && (
         <p role="alert" className="text-destructive text-xs">

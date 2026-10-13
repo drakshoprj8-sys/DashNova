@@ -24,6 +24,7 @@ import {
 const mocks = vi.hoisted(() => ({
   getDb: vi.fn(),
   getSegmentRecipients: vi.fn(),
+  getCustomRecipients: vi.fn(),
   sendEmail: vi.fn(),
   sendEmailBatch: vi.fn(),
   validateStoreOffer: vi.fn(),
@@ -37,6 +38,16 @@ vi.mock("@/features/emails/campaign-eligibility", () => ({
     _workspace: string,
     recipients: unknown[],
   ) => recipients,
+  inspectCampaignEligibility: async (
+    _workspace: string,
+    recipients: unknown[],
+  ) => ({
+    recipients,
+    excludedRecent: 0,
+    excludedConsent: 0,
+    excludedMailDomain: 0,
+  }),
+  describeCampaignExclusions: () => "",
   reserveCampaignRecipients: async (
     _workspace: string,
     recipients: unknown[],
@@ -55,7 +66,7 @@ vi.mock("@/features/emails/campaigns", () => ({
 }));
 vi.mock("@/features/emails/segments", () => ({
   getSegmentRecipients: mocks.getSegmentRecipients,
-  getCustomRecipients: vi.fn(),
+  getCustomRecipients: mocks.getCustomRecipients,
 }));
 vi.mock("@/features/emails/resend-provider", () => ({
   isResendConfigured: () => true,
@@ -101,7 +112,60 @@ describe("notification server boundary", () => {
     currency: "EUR",
     checkoutUrl: "https://example.com/checkout/produto",
   };
-  it.each(["all", "paid"])(
+  it("envia um comunicado personalizado para clientes importados selecionados sem exigir pedido novo", async () => {
+    const values = vi
+      .fn()
+      .mockReturnValue({
+        onConflictDoNothing: () => ({
+          returning: async () => [{ id: "campaign" }],
+        }),
+        onConflictDoUpdate: async () => undefined,
+      });
+    const db = {
+      insert: vi.fn().mockReturnValue({ values }),
+      update: vi
+        .fn()
+        .mockReturnValue({ set: () => ({ where: async () => undefined }) }),
+      selectDistinct: vi.fn(),
+    };
+    mocks.getDb.mockReturnValue(db);
+    mocks.getCustomRecipients.mockResolvedValue({
+      recipients: [
+        {
+          id: "a",
+          name: "Ana",
+          email: "ana@example.com",
+          productName: "Cadeira",
+          orderId: null,
+        },
+      ],
+      totalSelected: 1,
+    });
+    mocks.sendEmailBatch.mockResolvedValue({ ok: true, externalIds: ["a"] });
+    const content = buildStoreNoticeContent({
+      ...STORE_NOTICE_PREFERENCES,
+      subject: "Ana, confira as novidades",
+      headerName: "Equipa da minha loja",
+    });
+    const result = await sendCampaignAction(
+      null,
+      form({
+        ...content,
+        segment: "custom",
+        checkoutMode: "notice",
+        customerIds: "a",
+        campaignName: "Clientes da outra loja",
+      }),
+    );
+    expect(result).toMatchObject({ ok: true, total: 1 });
+    expect(values.mock.calls[0][0].name).toBe("Clientes da outra loja");
+    expect(mocks.getCustomRecipients).toHaveBeenCalledWith(["a"], undefined);
+    expect(db.selectDistinct).not.toHaveBeenCalled();
+    expect(mocks.sendEmailBatch.mock.calls[0][0][0].subject).toBe(
+      "Ana, confira as novidades",
+    );
+  });
+  it.each(["all", "paid", "imported_paid", "imported_pending"])(
     "usa a URL escolhida no teste e no lote do público %s",
     async (segment) => {
       const values = vi.fn().mockReturnValue({

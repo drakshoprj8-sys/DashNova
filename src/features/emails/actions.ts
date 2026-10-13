@@ -83,12 +83,22 @@ const RESEND_BATCH_INTERVAL_MS = 600;
 
 const campaignSchema = z.object({
   dispatchId: z.string().uuid(),
+  campaignName: z.string().trim().max(120).default(""),
   campaignKind: z
     .enum(["notice", "offer", "notice-offer", "notice-link"])
     .default("notice"),
   offerUrl: z.string().trim().max(2048).default(""),
-  segment: z.enum(["paid", "pending", "refused", "no_orders", "all", "custom"]),
-  checkoutMode: z.enum(["order", "checkout"]).default("order"),
+  segment: z.enum([
+    "paid",
+    "imported_paid",
+    "imported_pending",
+    "pending",
+    "refused",
+    "no_orders",
+    "all",
+    "custom",
+  ]),
+  checkoutMode: z.enum(["order", "checkout", "notice"]).default("order"),
   customerIds: z.string().trim().optional().or(z.literal("")),
   subject: z.string().trim().min(3, "Escreva um assunto").max(160),
   preheader: z.string().trim().max(180).optional().or(z.literal("")),
@@ -125,6 +135,7 @@ async function resolveRecipients(
   customerIdsRaw: string | undefined,
   appUrl: string,
   pendingCheckout: boolean,
+  informational: boolean,
 ): Promise<Recipient[]> {
   const recipients =
     segment === "custom"
@@ -144,7 +155,7 @@ async function resolveRecipients(
     const key = recipient.email.trim().toLowerCase();
     if (key && !unique.has(key)) unique.set(key, recipient);
   }
-  if (isStoreNoticeSegment(segment)) {
+  if (informational) {
     return Array.from(unique.values())
       .filter(
         (recipient) => z.email().safeParse(recipient.email.trim()).success,
@@ -154,7 +165,7 @@ async function resolveRecipients(
         email: recipient.email.trim().toLowerCase(),
         orderId: null,
         orderReference: null,
-        productName: null,
+        productName: recipient.productName,
         checkoutUrl: null,
         orderTotalCents: null,
         currency: null,
@@ -450,6 +461,7 @@ export async function sendCampaignAction(
 
   const parsed = campaignSchema.safeParse({
     dispatchId: formData.get("dispatchId"),
+    campaignName: formData.get("campaignName") ?? "",
     campaignKind: formData.get("campaignKind") ?? "notice",
     offerUrl: formData.get("offerUrl") ?? "",
     segment: formData.get("segment"),
@@ -475,7 +487,9 @@ export async function sendCampaignAction(
     parsed.data.segment === "pending" ||
     (parsed.data.segment === "custom" &&
       parsed.data.checkoutMode === "checkout");
-  const informational = isStoreNoticeSegment(parsed.data.segment);
+  const informational =
+    isStoreNoticeSegment(parsed.data.segment) ||
+    (parsed.data.segment === "custom" && parsed.data.checkoutMode === "notice");
   let offer: StoreOffer | null = null;
   const noticeOffer = parsed.data.campaignKind === "notice-offer";
   const noticeLink = parsed.data.campaignKind === "notice-link";
@@ -627,6 +641,7 @@ export async function sendCampaignAction(
     customerIds,
     appUrl,
     pendingCheckout,
+    informational,
   );
   const workspaceId = await getOrCreateDefaultWorkspace();
   const eligibility = await inspectCampaignEligibility(
@@ -679,7 +694,7 @@ export async function sendCampaignAction(
     .values({
       id: dispatchId,
       workspaceId,
-      name: subject.slice(0, 120),
+      name: parsed.data.campaignName || subject.slice(0, 120),
       subject,
       preheader: preheader || null,
       fromEmail: process.env.RESEND_FROM_EMAIL,
@@ -714,7 +729,11 @@ export async function sendCampaignAction(
       audienceFilter: {
         segment,
         customerIds: customerIds || null,
-        checkoutMode: pendingCheckout ? "checkout" : "order",
+        checkoutMode: informational
+          ? "notice"
+          : pendingCheckout
+            ? "checkout"
+            : "order",
       },
       status: "sending",
       stats: {

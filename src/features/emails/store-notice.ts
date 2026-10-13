@@ -8,7 +8,7 @@ import { buildCampaignHtml, DEFAULT_CAMPAIGN_TEMPLATE } from "./template";
 import type { SegmentKey } from "./types";
 
 export function isStoreNoticeSegment(segment: SegmentKey): boolean {
-  return segment === "all" || segment === "paid";
+  return ["all", "paid", "imported_paid", "imported_pending"].includes(segment);
 }
 
 export const STORE_NOTICE_KIND = "pccgvip-store-notice-v1";
@@ -80,14 +80,31 @@ export function getStoreNoticeValidationError(
     note,
   ].join("\n");
   if (
-    /\b(?:correios|ctt)\b|\{\{\s*(?!PRIMEIRO_NOME\s*\}\}|NOME\s*\}\}|EMAIL\s*\}\})[^}]*\}\}/i.test(
+    /\b(?:correios|ctt)\b|\{\{\s*(?!PRIMEIRO_NOME\s*\}\}|NOME\s*\}\}|NOME_CLIENTE\s*\}\}|EMAIL\s*\}\}|PRODUTO\s*\}\})[^}]*\}\}/i.test(
       visibleText,
     )
   ) {
-    return "Use a identidade da PCCGVIP e apenas as variáveis de nome e e-mail neste comunicado.";
+    return "Use a identidade da sua loja e apenas as variáveis de nome, e-mail e produto neste comunicado.";
+  }
+  for (const [field, label, limit, minimum] of [
+    ["subject", "Assunto", 160, 3],
+    ["headerName", "Nome no cabeçalho", 80, 1],
+  ] as const) {
+    const text =
+      typeof content[field] === "string" ? content[field].trim() : "";
+    if (
+      text.length < minimum ||
+      text.length > limit ||
+      /[\r\n<>@]|https?:\/\/|www\.|\b(?:pagamento|pagar|pague|cobrança|taxa|retid[ao]|libertar)\b/i.test(
+        text,
+      )
+    )
+      return `${label}: use de ${minimum} a ${limit} caracteres, sem HTML, links ou cobranças.`;
   }
   return getOrderNotificationValidationError({
     ...content,
+    subject: DEFAULT_CAMPAIGN_TEMPLATE.subject,
+    headerName: DEFAULT_CAMPAIGN_TEMPLATE.headerName,
     body: DEFAULT_CAMPAIGN_TEMPLATE.body,
     ctaUrl: "{{CHECKOUT_URL}}",
   });
@@ -104,7 +121,7 @@ export function buildStoreNoticeHtml(
     vars: {
       ...input.vars,
       pedido: "",
-      produto: "",
+      produto: input.vars.produto === "o seu produto" ? "" : input.vars.produto,
       valor: "",
       checkoutUrl: "",
       lojaUrl: "",

@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 
 import { formatNumber } from "@/lib/format";
+import { CustomerOverview } from "@/features/customers/customer-overview";
 import type { ProductOption } from "@/features/products/queries";
 import type { CustomerListResponse } from "@/features/customers/types";
 import { CustomersTable } from "@/features/customers/customers-table";
@@ -57,6 +58,8 @@ const SORT_OPTIONS = [
 ] as const;
 
 const CUSTOMER_TYPE_LABELS: Record<string, string> = {
+  approved: "Pagamentos aprovados",
+  payments_pending: "Pagamentos pendentes",
   imported_paid: "Pagos informados",
   imported_pending: "Pendentes informados",
   buyer: "Compradores confirmados",
@@ -478,10 +481,10 @@ export function CustomersView({ products }: { products: ProductOption[] }) {
             type="button"
             size="sm"
             onClick={() =>
-              router.push("/emails?segment=paid&source=clientes")
+              router.push("/emails?segment=imported_paid&source=clientes")
             }
           >
-            <Mail /> Usar pagantes em Emails
+            <Mail /> Email para pagos da outra loja
           </Button>
           <Button
             type="button"
@@ -494,7 +497,13 @@ export function CustomersView({ products }: { products: ProductOption[] }) {
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <CustomerOverview
+        stats={stats ?? null}
+        activeType={type}
+        onSelect={(next) => updateParams({ type: next })}
+      />
+
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
         <StatCard
           label="Total de contatos"
           value={formatNumber(stats?.totalContacts ?? 0)}
@@ -546,6 +555,29 @@ export function CustomersView({ products }: { products: ProductOption[] }) {
       </div>
 
       <Card className="gap-0 overflow-hidden py-0 shadow-xs">
+        <nav
+          aria-label="Grupos de clientes"
+          className="flex gap-1 overflow-x-auto border-b px-3 pt-2"
+        >
+          {[
+            ["all", "Todos"],
+            ["approved", "Aprovados"],
+            ["payments_pending", "Pendentes"],
+            ["abandoned", "Carrinhos"],
+            ["imported_paid", "Pagos da outra loja"],
+            ["imported_pending", "Pendentes da outra loja"],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-current={type === value ? "page" : undefined}
+              onClick={() => updateParams({ type: value })}
+              className={`shrink-0 border-b-2 px-3 py-3 text-xs font-medium transition-colors ${type === value ? "border-primary text-primary" : "text-muted-foreground hover:text-foreground border-transparent"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
         <div className="space-y-3 border-b p-3">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <div className="relative min-w-0 flex-1">
@@ -580,6 +612,8 @@ export function CustomersView({ products }: { products: ProductOption[] }) {
                 className={selectClass()}
               >
                 <option value="all">Todos os contatos</option>
+                <option value="approved">Pagamentos aprovados</option>
+                <option value="payments_pending">Pagamentos pendentes</option>
                 <option value="imported_paid">
                   Pagos informados pela planilha
                 </option>

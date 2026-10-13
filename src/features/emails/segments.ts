@@ -38,6 +38,9 @@ const STATUS_BY_SEGMENT: Record<string, string[]> = {
 };
 
 const IMPORTED_PAID_STATUS = JSON.stringify([CUSTOMER_IMPORT_STATUS_TAGS.paid]);
+const IMPORTED_PENDING_STATUS = JSON.stringify([
+  CUSTOMER_IMPORT_STATUS_TAGS.pending,
+]);
 
 export interface Recipient {
   id: string;
@@ -51,6 +54,7 @@ export interface Recipient {
   checkoutUrl: string | null;
   orderTotalCents: number | null;
   currency: string | null;
+  createdAt?: string;
 }
 
 type RecipientWithoutContext = Omit<
@@ -155,22 +159,26 @@ export async function getSegmentRecipients(
   // A aba Clientes considera tanto pedidos aprovados quanto a classificação
   // explícita "Pago" da importação. Emails precisa usar exatamente a mesma
   // fonte para não perder pagantes que ainda não possuem um pedido local.
-  const audienceCondition = statuses
-    ? segment === "paid"
-      ? or(
-          inArray(orders.status, statuses as never),
-          isNotNull(customers.firstPurchaseAt),
-          sql`coalesce(${customers.tags}, '[]'::jsonb) @> ${IMPORTED_PAID_STATUS}::jsonb`,
-        )
-      : segment === "pending"
-        ? and(
-            eq(orders.status, "awaiting_payment"),
-            isNotNull(orders.checkoutUrl),
-            isNull(orders.paidAt),
-            isNull(orders.importBatchId),
-          )
-        : inArray(orders.status, statuses as never)
-    : undefined;
+  const audienceCondition =
+    segment === "imported_paid"
+      ? sql`coalesce(${customers.tags}, '[]'::jsonb) @> ${IMPORTED_PAID_STATUS}::jsonb`
+      : segment === "imported_pending"
+        ? sql`coalesce(${customers.tags}, '[]'::jsonb) @> ${IMPORTED_PENDING_STATUS}::jsonb`
+        : statuses
+          ? segment === "paid"
+            ? or(
+                inArray(orders.status, statuses as never),
+                sql`coalesce(${customers.tags}, '[]'::jsonb) @> ${IMPORTED_PAID_STATUS}::jsonb`,
+              )
+            : segment === "pending"
+              ? and(
+                  eq(orders.status, "awaiting_payment"),
+                  isNotNull(orders.checkoutUrl),
+                  isNull(orders.paidAt),
+                  isNull(orders.importBatchId),
+                )
+              : inArray(orders.status, statuses as never)
+          : undefined;
 
   const rows = await db
     .select({
@@ -179,18 +187,25 @@ export async function getSegmentRecipients(
       firstName: customers.firstName,
       lastName: customers.lastName,
       importedProductName: customers.importedProductName,
+      createdAt: customers.createdAt,
       orderCount: sql<number>`count(${orders.id})::int`,
       totalSpentCents: sql<number>`coalesce(sum(case when ${orders.status} in ('paid','preparing','shipped','delivered') then ${orders.totalCents} else 0 end), 0)::int`,
     })
     .from(customers)
-    .leftJoin(orders, eq(orders.customerId, customers.id))
+    .leftJoin(
+      orders,
+      and(
+        eq(orders.customerId, customers.id),
+        eq(orders.workspaceId, workspaceId),
+      ),
+    )
     .where(
       and(
         eq(customers.workspaceId, workspaceId),
         isNull(customers.deletedAt),
         eq(customers.marketingOptOut, false),
         eq(customers.isBlocked, false),
-        segment === "all" || segment === "paid"
+        ["all", "paid", "imported_paid", "imported_pending"].includes(segment)
           ? eq(customers.acceptsEmail, true)
           : undefined,
         audienceCondition,
@@ -216,6 +231,7 @@ export async function getSegmentRecipients(
       orderCount: r.orderCount,
       totalSpentCents: r.totalSpentCents,
       fallbackProductName: r.importedProductName,
+      createdAt: r.createdAt.toISOString(),
     }));
 
   return includeOrderContext
@@ -224,7 +240,7 @@ export async function getSegmentRecipients(
         ...recipient,
         orderId: null,
         orderReference: null,
-        productName: null,
+        productName: recipient.fallbackProductName ?? null,
         checkoutUrl: null,
         orderTotalCents: null,
         currency: null,
@@ -329,11 +345,14 @@ export async function getSegmentCounts(): Promise<Record<SegmentKey, number>> {
 export interface ConsolidatedCustomerCounts {
   total: number;
   importedPaid: number;
+  importedPending: number;
+  approved: number;
 }
 
 /** Totais brutos exibidos na aba Clientes, antes das regras de envio. */
 export async function getConsolidatedCustomerCounts(): Promise<ConsolidatedCustomerCounts> {
-  if (!isDatabaseConfigured()) return { total: 0, importedPaid: 0 };
+  if (!isDatabaseConfigured())
+    return { total: 0, importedPaid: 0, importedPending: 0, approved: 0 };
 
   const db = getDb();
   const workspaceId = await getOrCreateDefaultWorkspace();
@@ -342,6 +361,14 @@ export async function getConsolidatedCustomerCounts(): Promise<ConsolidatedCusto
       total: sql<number>`count(*)::int`,
       importedPaid: sql<number>`count(*) filter (
         where coalesce(${customers.tags}, '[]'::jsonb) @> ${IMPORTED_PAID_STATUS}::jsonb
+      )::int`,
+      importedPending: sql<number>`count(*) filter (
+        where coalesce(${customers.tags}, '[]'::jsonb) @> ${IMPORTED_PENDING_STATUS}::jsonb
+      )::int`,
+      approved: sql<number>`count(*) filter (where
+        coalesce(${customers.tags}, '[]'::jsonb) @> ${IMPORTED_PAID_STATUS}::jsonb
+        or exists (select 1 from orders o where o.customer_id = ${customers.id}
+          and o.workspace_id = ${workspaceId} and o.status in ('paid','preparing','shipped','delivered'))
       )::int`,
     })
     .from(customers)
@@ -352,6 +379,8 @@ export async function getConsolidatedCustomerCounts(): Promise<ConsolidatedCusto
   return {
     total: Number(row?.total ?? 0),
     importedPaid: Number(row?.importedPaid ?? 0),
+    importedPending: Number(row?.importedPending ?? 0),
+    approved: Number(row?.approved ?? 0),
   };
 }
 

@@ -8,8 +8,8 @@ describe("segmentos de email", () => {
 
     expect(paid).toEqual({
       key: "paid",
-      label: "Pedidos pagos",
-      description: "Pagos informados na aba Clientes",
+      label: "Pagamentos aprovados",
+      description: "Pedidos aprovados e clientes pagos da outra loja",
     });
   });
 
@@ -28,6 +28,8 @@ describe("segmentos de email", () => {
   it("aceita apenas públicos fixos na rota de prévia", () => {
     expect(isFixedSegmentKey("paid")).toBe(true);
     expect(isFixedSegmentKey("pending")).toBe(true);
+    expect(isFixedSegmentKey("imported_paid")).toBe(true);
+    expect(isFixedSegmentKey("imported_pending")).toBe(true);
     expect(isFixedSegmentKey("custom")).toBe(false);
     expect(isFixedSegmentKey("qualquer")).toBe(false);
   });

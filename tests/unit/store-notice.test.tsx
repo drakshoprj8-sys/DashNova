@@ -12,6 +12,33 @@ import {
 afterEach(cleanup);
 
 describe("comunicado informativo para todos", () => {
+  it("aceita assunto e cabeçalho personalizados sem mudar o remetente ou inventar uma compra", () => {
+    const content = buildStoreNoticeContent({
+      ...STORE_NOTICE_PREFERENCES,
+      subject: "{{PRIMEIRO_NOME}}, confira as novidades",
+      headerName: "Atendimento da minha loja",
+      customMessage:
+        "{{NOME_CLIENTE}}, novidades para quem gosta de {{PRODUTO}}.",
+    });
+    expect(getStoreNoticeValidationError(content)).toBeNull();
+    const html = buildStoreNoticeHtml({
+      ...content,
+      vars: {
+        nome: "Ana Silva",
+        primeiroNome: "Ana",
+        email: "ana@example.com",
+        produto: "Cadeira Gaming",
+        pedido: "",
+        valor: "",
+        checkoutUrl: "",
+        lojaUrl: "",
+      },
+    });
+    expect(html).toContain("Atendimento da minha loja");
+    expect(html).toContain("Ana Silva");
+    expect(html).toContain("Cadeira Gaming");
+    expect(html).not.toContain("Encomenda:");
+  });
   it("aceita personalização de nome sem inventar um pedido", () => {
     const content = buildStoreNoticeContent({
       ...STORE_NOTICE_PREFERENCES,
@@ -78,27 +105,38 @@ describe("comunicado informativo para todos", () => {
     ).not.toBeNull();
   });
 
-  it.each(["all", "paid"] as const)("exibe um editor de %s sem checkout e envia o corpo correto no formulário", (audience) => {
-    function Harness() {
-      const [value, setValue] = React.useState({ ...STORE_NOTICE_PREFERENCES });
-      return (
-        <form aria-label="Comunicado">
-          <StoreNoticeEditor audience={audience} value={value} onChange={setValue} />
-        </form>
+  it.each(["all", "paid"] as const)(
+    "exibe um editor de %s sem checkout e envia o corpo correto no formulário",
+    (audience) => {
+      function Harness() {
+        const [value, setValue] = React.useState({
+          ...STORE_NOTICE_PREFERENCES,
+        });
+        return (
+          <form aria-label="Comunicado">
+            <StoreNoticeEditor
+              audience={audience}
+              value={value}
+              onChange={setValue}
+            />
+          </form>
+        );
+      }
+      render(<Harness />);
+      fireEvent.change(screen.getByLabelText("Mensagem do comunicado"), {
+        target: {
+          value: "Obrigado por acompanhar as novidades da nossa loja.",
+        },
+      });
+      expect(screen.queryByLabelText("Link do botão (checkout)")).toBeNull();
+      const fields = new FormData(
+        screen.getByRole("form", { name: "Comunicado" }) as HTMLFormElement,
       );
-    }
-    render(<Harness />);
-    fireEvent.change(screen.getByLabelText("Mensagem do comunicado"), {
-      target: { value: "Obrigado por acompanhar as novidades da nossa loja." },
-    });
-    expect(screen.queryByLabelText("Link do botão (checkout)")).toBeNull();
-    const fields = new FormData(
-      screen.getByRole("form", { name: "Comunicado" }) as HTMLFormElement,
-    );
-    expect(fields.get("ctaUrl")).toBe("");
-    expect(fields.getAll("body")).toHaveLength(1);
-    expect(
-      getStoreNoticeValidationError(Object.fromEntries(fields)),
-    ).toBeNull();
-  });
+      expect(fields.get("ctaUrl")).toBe("");
+      expect(fields.getAll("body")).toHaveLength(1);
+      expect(
+        getStoreNoticeValidationError(Object.fromEntries(fields)),
+      ).toBeNull();
+    },
+  );
 });

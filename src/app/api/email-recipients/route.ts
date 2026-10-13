@@ -2,9 +2,11 @@ import { NextRequest } from "next/server";
 
 import {
   getSegmentPreviewRecipients,
+  getSegmentRecipients,
   searchEmailRecipients,
 } from "@/features/emails/segments";
 import { isFixedSegmentKey } from "@/features/emails/types";
+import { paginateEmailAudience } from "@/features/emails/audience";
 import { getSession } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,18 @@ export async function GET(request: NextRequest) {
     if (segment) {
       if (!isFixedSegmentKey(segment)) {
         return Response.json({ error: "Público inválido." }, { status: 400 });
+      }
+      if (request.nextUrl.searchParams.has("page")) {
+        const result = paginateEmailAudience(
+          await getSegmentRecipients(segment, false),
+          {
+            q: (request.nextUrl.searchParams.get("q") ?? "").slice(0, 120),
+            from: request.nextUrl.searchParams.get("from") ?? "",
+            to: request.nextUrl.searchParams.get("to") ?? "",
+            page: Number(request.nextUrl.searchParams.get("page") ?? 1),
+          },
+        );
+        return Response.json(result);
       }
 
       const limit = Number(request.nextUrl.searchParams.get("limit") ?? 25);

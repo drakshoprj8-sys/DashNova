@@ -12,7 +12,8 @@ export const DEFAULT_CAMPAIGN_TEMPLATE = {
   articleName: "{{PRODUTO}}",
   ctaLabel: "Ver pedido",
   ctaUrl: "{{CHECKOUT_URL}}",
-  fallbackText: "Se o botão não funcionar, copie o endereço abaixo no navegador.",
+  fallbackText:
+    "Se o botão não funcionar, copie o endereço abaixo no navegador.",
 } as const;
 
 export const EMAIL_VARIABLES = [
@@ -49,6 +50,7 @@ export interface CampaignTemplateContent {
 
 const VARIABLE_ALIASES: Record<string, keyof CampaignTemplateVars> = {
   NOME: "nome",
+  NOME_CLIENTE: "nome",
   PRIMEIRO_NOME: "primeiroNome",
   EMAIL: "email",
   PRODUTO: "produto",

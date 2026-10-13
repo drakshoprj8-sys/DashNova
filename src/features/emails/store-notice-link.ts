@@ -99,7 +99,7 @@ export function buildStoreNoticeLinkHtml(
     vars: {
       ...input.vars,
       pedido: "",
-      produto: "",
+      produto: input.vars.produto === "o seu produto" ? "" : input.vars.produto,
       valor: "",
       checkoutUrl: "",
       lojaUrl: "",

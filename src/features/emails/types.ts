@@ -11,7 +11,14 @@
  * `SEGMENTS` (não é um card clicável, é resolvido a partir da URL).
  */
 export type SegmentKey =
-  "paid" | "pending" | "refused" | "no_orders" | "all" | "custom";
+  | "paid"
+  | "imported_paid"
+  | "imported_pending"
+  | "pending"
+  | "refused"
+  | "no_orders"
+  | "all"
+  | "custom";
 
 export type FixedSegmentKey = Exclude<SegmentKey, "custom">;
 
@@ -24,8 +31,18 @@ export interface SegmentDefinition {
 export const SEGMENTS: SegmentDefinition[] = [
   {
     key: "paid",
-    label: "Pedidos pagos",
-    description: "Pagos informados na aba Clientes",
+    label: "Pagamentos aprovados",
+    description: "Pedidos aprovados e clientes pagos da outra loja",
+  },
+  {
+    key: "imported_paid",
+    label: "Pagos da outra loja",
+    description: "Clientes classificados como pagos na importação",
+  },
+  {
+    key: "imported_pending",
+    label: "Pendentes da outra loja",
+    description: "Comunicado para os clientes pendentes importados",
   },
   {
     key: "pending",

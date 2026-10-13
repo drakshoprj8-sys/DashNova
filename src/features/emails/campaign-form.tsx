@@ -40,6 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NotificationEditor } from "./notification-editor";
+import { AudienceSelector } from "./audience-selector";
 import { StoreNoticeEditor } from "./store-notice-editor";
 import {
   buildStoreNoticeLinkContent,
@@ -120,6 +121,8 @@ export function CampaignForm({
   initialSegment,
   consolidatedCustomerCount,
   consolidatedPaidCustomerCount,
+  audienceTotals,
+  senderEmail,
   initialDispatchId,
 }: {
   counts: Record<string, number>;
@@ -130,6 +133,8 @@ export function CampaignForm({
   initialSegment: Exclude<SegmentKey, "custom">;
   consolidatedCustomerCount: number;
   consolidatedPaidCustomerCount: number;
+  audienceTotals?: Record<string, number>;
+  senderEmail?: string;
   initialDispatchId: string;
 }) {
   const router = useRouter();
@@ -146,9 +151,16 @@ export function CampaignForm({
   const [customCheckoutMode, setCustomCheckoutMode] = React.useState(
     initialSegment === "pending",
   );
+  const [customNoticeMode, setCustomNoticeMode] = React.useState(
+    initialSegment !== "pending",
+  );
+  const [audienceSource, setAudienceSource] = React.useState(initialSegment);
+  const [audienceRows, setAudienceRows] = React.useState<Recipient[]>([]);
+  const [campaignName, setCampaignName] = React.useState("");
   const isCheckoutCampaign =
     segment === "pending" || (segment === "custom" && customCheckoutMode);
-  const informational = isStoreNoticeSegment(segment);
+  const informational =
+    isStoreNoticeSegment(segment) || (segment === "custom" && customNoticeMode);
   const [noticeLink, setNoticeLink] = React.useState({
     ...NOTICE_LINK_DEFAULTS,
   });
@@ -320,11 +332,17 @@ export function CampaignForm({
       ...activeSegmentRecipients,
       ...(customRecipients?.recipients ?? []),
       ...customerResults,
+      ...audienceRows,
     ]) {
       unique.set(recipient.id, recipient);
     }
     return Array.from(unique.values());
-  }, [activeSegmentRecipients, customRecipients, customerResults]);
+  }, [
+    activeSegmentRecipients,
+    customRecipients,
+    customerResults,
+    audienceRows,
+  ]);
   const selectedPreviewRecipient =
     previewRecipients.find(
       (recipient) => recipient.id === previewRecipientId,
@@ -356,10 +374,15 @@ export function CampaignForm({
     const nextCheckout =
       next === "pending" || (next === "custom" && isCheckoutCampaign);
     setSegment(next);
+    if (next !== "custom") setAudienceSource(next);
+    const nextNotice =
+      isStoreNoticeSegment(next) ||
+      (next === "custom" && informational && !nextCheckout);
+    setCustomNoticeMode(nextNotice);
     setCustomCheckoutMode(nextCheckout);
     if (!nextCheckout) setRequestedCheckoutUrl("");
     setNotificationPreferences((current) =>
-      isStoreNoticeSegment(next)
+      nextNotice
         ? informational
           ? current
           : { ...STORE_NOTICE_PREFERENCES }
@@ -377,6 +400,7 @@ export function CampaignForm({
   }
 
   function chooseCustomDestination(checkout: boolean) {
+    setCustomNoticeMode(false);
     setCustomCheckoutMode(checkout);
     if (!checkout) setRequestedCheckoutUrl("");
     setNotificationPreferences((current) => ({
@@ -429,7 +453,7 @@ export function CampaignForm({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Nova notificação</CardTitle>
+          <CardTitle className="text-base">Novo disparo</CardTitle>
           <CardDescription>
             {informational
               ? "Prepare um comunicado informativo para os contatos da sua loja. A elegibilidade é confirmada ao enviar."
@@ -448,13 +472,63 @@ export function CampaignForm({
             <input
               type="hidden"
               name="checkoutMode"
-              value={isCheckoutCampaign ? "checkout" : "order"}
+              value={
+                informational && segment === "custom"
+                  ? "notice"
+                  : isCheckoutCampaign
+                    ? "checkout"
+                    : "order"
+              }
             />
             <input
               type="hidden"
               name="customerIds"
               value={activeCustomIds.join(",")}
             />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="campaignName">Nome do disparo</Label>
+                <Input
+                  id="campaignName"
+                  name="campaignName"
+                  value={campaignName}
+                  maxLength={120}
+                  placeholder="Ex.: Novidades para clientes de outubro"
+                  onChange={(event) => setCampaignName(event.target.value)}
+                />
+                <p className="text-muted-foreground text-xs">
+                  Nome para organizar seu histórico de campanhas.
+                </p>
+              </div>
+              {informational ? (
+                <div className="space-y-2">
+                  <Label htmlFor="campaignSubject">Assunto do email</Label>
+                  <Input
+                    id="campaignSubject"
+                    name="subject"
+                    value={notificationPreferences.subject}
+                    maxLength={160}
+                    onChange={(event) =>
+                      setNotificationPreferences((current) => ({
+                        ...current,
+                        subject: event.target.value,
+                      }))
+                    }
+                    placeholder="Ex.: {{PRIMEIRO_NOME}}, confira nossas novidades"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    Personalize o assunto. Você pode usar o nome do cliente.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+            <div className="bg-muted/30 rounded-lg border px-4 py-3">
+              <p className="text-xs font-medium">Remetente</p>
+              <p className="text-muted-foreground mt-1 text-sm">
+                {senderEmail || "Remetente configurado na loja"}
+              </p>
+            </div>
 
             {state?.error && (
               <Alert variant="destructive">
@@ -596,11 +670,12 @@ export function CampaignForm({
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {SEGMENTS.map((item) => {
                   const displayCount =
-                    item.key === "all"
+                    audienceTotals?.[item.key] ??
+                    (item.key === "all"
                       ? consolidatedCustomerCount
                       : item.key === "paid"
                         ? consolidatedPaidCustomerCount
-                        : (counts[item.key] ?? 0);
+                        : (counts[item.key] ?? 0));
 
                   return (
                     <button
@@ -629,8 +704,8 @@ export function CampaignForm({
                       <span className="text-muted-foreground mt-0.5 block text-xs">
                         {item.key === "all"
                           ? `Base consolidada da aba Clientes · ${formatCount(counts.all ?? 0)} com consentimento para campanhas`
-                          : item.key === "paid"
-                            ? `Pagos informados na aba Clientes · ${formatCount(counts.paid ?? 0)} com consentimento para campanhas`
+                          : isStoreNoticeSegment(item.key)
+                            ? `${item.description} · ${formatCount(counts[item.key] ?? 0)} disponíveis para campanhas`
                             : item.description}
                       </span>
                     </button>
@@ -647,14 +722,17 @@ export function CampaignForm({
                       <strong>{formatCount(counts.all ?? 0)}</strong> contatos
                       pré-selecionados com consentimento de e-mail.
                     </p>
-                  ) : segment === "paid" ? (
+                  ) : isStoreNoticeSegment(segment) ? (
                     <p className="text-sm">
                       <strong>
-                        {formatCount(consolidatedPaidCustomerCount)}
+                        {formatCount(
+                          audienceTotals?.[segment] ??
+                            consolidatedPaidCustomerCount,
+                        )}
                       </strong>{" "}
-                      pagos informados na aba Clientes;{" "}
-                      <strong>{formatCount(counts.paid ?? 0)}</strong> contatos
-                      pré-selecionados com consentimento de e-mail.
+                      clientes neste público;{" "}
+                      <strong>{formatCount(counts[segment] ?? 0)}</strong>{" "}
+                      contatos pré-selecionados com consentimento de e-mail.
                     </p>
                   ) : (
                     <p className="text-sm">
@@ -669,304 +747,343 @@ export function CampaignForm({
               )}
             </div>
 
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <Label htmlFor="customer-search">
-                    Selecao individual (opcional)
-                  </Label>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Busque por nome ou e-mail para preparar um disparo
-                    individual ou uma seleção manual.
-                  </p>
-                </div>
-                {selectedCustomerIds.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="info">
-                      {selectedCustomerIds.length} selecionado
-                      {selectedCustomerIds.length === 1 ? "" : "s"}
-                    </Badge>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedCustomerIds([])}
-                    >
-                      <X /> Limpar
-                    </Button>
+            {informational ? (
+              <AudienceSelector
+                key={audienceSource}
+                segment={audienceSource}
+                selectedIds={segment === "custom" ? selectedCustomerIds : null}
+                onRecipients={setAudienceRows}
+                onSelectionChange={(ids) => {
+                  setSelectedCustomerIds(ids ?? []);
+                  setCustomCheckoutMode(false);
+                  setCustomNoticeMode(true);
+                  setSegment(ids === null ? audienceSource : "custom");
+                }}
+              />
+            ) : null}
+
+            {!informational ? (
+              <>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-end justify-between gap-2">
+                    <div>
+                      <Label htmlFor="customer-search">
+                        Selecao individual (opcional)
+                      </Label>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Busque por nome ou e-mail para preparar um disparo
+                        individual ou uma seleção manual.
+                      </p>
+                    </div>
+                    {selectedCustomerIds.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="info">
+                          {selectedCustomerIds.length} selecionado
+                          {selectedCustomerIds.length === 1 ? "" : "s"}
+                        </Badge>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedCustomerIds([])}
+                        >
+                          <X /> Limpar
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div className="relative">
-                <Search
-                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                  aria-hidden="true"
-                />
-                <Input
-                  id="customer-search"
-                  type="search"
-                  value={customerQuery}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setCustomerQuery(value);
-                    if (value.trim().length < 2) {
-                      setCustomerResults([]);
-                      setCustomerSearchError("");
-                      setSearchingCustomers(false);
-                    }
-                  }}
-                  placeholder="Nome ou e-mail do cliente"
-                  className="pr-9 pl-9"
-                  autoComplete="off"
-                />
-                {searchingCustomers && (
-                  <LoaderCircle
-                    className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin"
-                    aria-label="Buscando clientes"
-                  />
-                )}
-              </div>
+                  <div className="relative">
+                    <Search
+                      className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      id="customer-search"
+                      type="search"
+                      value={customerQuery}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCustomerQuery(value);
+                        if (value.trim().length < 2) {
+                          setCustomerResults([]);
+                          setCustomerSearchError("");
+                          setSearchingCustomers(false);
+                        }
+                      }}
+                      placeholder="Nome ou e-mail do cliente"
+                      className="pr-9 pl-9"
+                      autoComplete="off"
+                    />
+                    {searchingCustomers && (
+                      <LoaderCircle
+                        className="text-muted-foreground absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin"
+                        aria-label="Buscando clientes"
+                      />
+                    )}
+                  </div>
 
-              {customerSearchError && (
-                <p className="text-destructive text-xs" role="alert">
-                  {customerSearchError}
-                </p>
-              )}
-
-              {customerQuery.trim().length >= 2 && !searchingCustomers && (
-                <div
-                  className="max-h-72 overflow-y-auto rounded-md border"
-                  aria-live="polite"
-                >
-                  {customerResults.length === 0 ? (
-                    <p className="text-muted-foreground px-3 py-6 text-center text-sm">
-                      Nenhum cliente encontrado.
+                  {customerSearchError && (
+                    <p className="text-destructive text-xs" role="alert">
+                      {customerSearchError}
                     </p>
-                  ) : (
-                    <div className="divide-border divide-y">
-                      {customerResults.map((customer) => {
-                        const selected = selectedCustomerIds.includes(
-                          customer.id,
-                        );
-                        return (
-                          <div
-                            key={customer.id}
-                            className="flex items-center gap-3 px-3 py-2.5"
-                          >
-                            <div className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-full">
-                              <UserRound
-                                className="text-muted-foreground size-4"
-                                aria-hidden="true"
-                              />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium">
-                                {customer.name}
-                              </p>
-                              <p className="text-muted-foreground truncate text-xs">
-                                {customer.email}
-                              </p>
-                              {customer.productName && (
-                                <p className="text-muted-foreground truncate text-[11px]">
-                                  {customer.productName}
-                                  {customer.orderReference
-                                    ? ` · ${customer.orderReference}`
-                                    : ""}
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              aria-pressed={selected}
-                              onClick={() => toggleRecipient(customer.id)}
-                            >
-                              {selected ? <Check /> : <Plus />}
-                              {selected ? "Adicionado" : "Adicionar"}
-                            </Button>
-                          </div>
-                        );
-                      })}
+                  )}
+
+                  {customerQuery.trim().length >= 2 && !searchingCustomers && (
+                    <div
+                      className="max-h-72 overflow-y-auto rounded-md border"
+                      aria-live="polite"
+                    >
+                      {customerResults.length === 0 ? (
+                        <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+                          Nenhum cliente encontrado.
+                        </p>
+                      ) : (
+                        <div className="divide-border divide-y">
+                          {customerResults.map((customer) => {
+                            const selected = selectedCustomerIds.includes(
+                              customer.id,
+                            );
+                            return (
+                              <div
+                                key={customer.id}
+                                className="flex items-center gap-3 px-3 py-2.5"
+                              >
+                                <div className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-full">
+                                  <UserRound
+                                    className="text-muted-foreground size-4"
+                                    aria-hidden="true"
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium">
+                                    {customer.name}
+                                  </p>
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {customer.email}
+                                  </p>
+                                  {customer.productName && (
+                                    <p className="text-muted-foreground truncate text-[11px]">
+                                      {customer.productName}
+                                      {customer.orderReference
+                                        ? ` · ${customer.orderReference}`
+                                        : ""}
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  aria-pressed={selected}
+                                  onClick={() => toggleRecipient(customer.id)}
+                                >
+                                  {selected ? <Check /> : <Plus />}
+                                  {selected ? "Adicionado" : "Adicionar"}
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+              </>
+            ) : null}
+
+            {!informational &&
+              segment !== "custom" &&
+              loadingSegmentRecipients && (
+                <div
+                  className="text-muted-foreground flex items-center gap-2 rounded-md border px-3 py-3 text-sm"
+                  role="status"
+                >
+                  <LoaderCircle className="size-4 animate-spin" />
+                  Carregando a prévia de {selectedSegment?.label ?? "clientes"}…
+                </div>
               )}
-            </div>
 
-            {segment !== "custom" && loadingSegmentRecipients && (
-              <div
-                className="text-muted-foreground flex items-center gap-2 rounded-md border px-3 py-3 text-sm"
-                role="status"
-              >
-                <LoaderCircle className="size-4 animate-spin" />
-                Carregando a prévia de {selectedSegment?.label ?? "clientes"}…
-              </div>
-            )}
+            {!informational &&
+              segment !== "custom" &&
+              segmentRecipientsError && (
+                <Alert variant="destructive">
+                  <AlertCircle />
+                  <AlertDescription>{segmentRecipientsError}</AlertDescription>
+                </Alert>
+              )}
 
-            {segment !== "custom" && segmentRecipientsError && (
-              <Alert variant="destructive">
-                <AlertCircle />
-                <AlertDescription>{segmentRecipientsError}</AlertDescription>
-              </Alert>
-            )}
-
-            {segment !== "custom" && activeSegmentRecipients.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-end justify-between gap-2">
-                  <div>
-                    <Label>
-                      Prévia do público: {selectedSegment?.label ?? "Clientes"}
-                    </Label>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      Exibindo até 25 contatos. Todos os {formatCount(total)}{" "}
-                      estão pré-selecionados. O envio ainda verifica
-                      consentimento, domínio de e-mail e intervalo de 24 horas.
-                    </p>
+            {!informational &&
+              segment !== "custom" &&
+              activeSegmentRecipients.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-end justify-between gap-2">
+                    <div>
+                      <Label>
+                        Prévia do público:{" "}
+                        {selectedSegment?.label ?? "Clientes"}
+                      </Label>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Exibindo até 25 contatos. Todos os {formatCount(total)}{" "}
+                        estão pré-selecionados. O envio ainda verifica
+                        consentimento, domínio de e-mail e intervalo de 24
+                        horas.
+                      </p>
+                    </div>
+                    <Button type="button" variant="default" size="sm" disabled>
+                      <Check /> {formatCount(total)} pré-selecionados
+                    </Button>
                   </div>
-                  <Button type="button" variant="default" size="sm" disabled>
-                    <Check /> {formatCount(total)} pré-selecionados
-                  </Button>
-                </div>
-                <div className="divide-border divide-y rounded-md border sm:hidden">
-                  {activeSegmentRecipients.map((recipient) => {
-                    return (
-                      <div
-                        key={recipient.id}
-                        className="flex items-start gap-3 p-3"
-                      >
-                        <input
-                          type="checkbox"
-                          checked
-                          disabled
-                          readOnly
-                          aria-label={`Selecionar ${recipient.name}`}
-                          className="accent-primary mt-1 size-4 shrink-0"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
-                            {recipient.name}
-                          </p>
-                          <p className="text-muted-foreground truncate text-xs">
-                            {recipient.email}
-                          </p>
-                          <p className="mt-2 line-clamp-2 text-xs">
-                            {recipient.productName ?? "Produto nao informado"}
-                          </p>
-                          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 text-[11px]">
-                            <span className="font-mono">
-                              {recipient.orderReference ?? "Sem pedido"}
-                            </span>
-                            <span className="font-semibold">
-                              {money(
-                                recipient.orderTotalCents,
-                                recipient.currency,
-                              )}
-                            </span>
+                  <div className="divide-border divide-y rounded-md border sm:hidden">
+                    {activeSegmentRecipients.map((recipient) => {
+                      return (
+                        <div
+                          key={recipient.id}
+                          className="flex items-start gap-3 p-3"
+                        >
+                          <input
+                            type="checkbox"
+                            checked
+                            disabled
+                            readOnly
+                            aria-label={`Selecionar ${recipient.name}`}
+                            className="accent-primary mt-1 size-4 shrink-0"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {recipient.name}
+                            </p>
+                            <p className="text-muted-foreground truncate text-xs">
+                              {recipient.email}
+                            </p>
+                            <p className="mt-2 line-clamp-2 text-xs">
+                              {recipient.productName ?? "Produto nao informado"}
+                            </p>
+                            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 text-[11px]">
+                              <span className="font-mono">
+                                {recipient.orderReference ?? "Sem pedido"}
+                              </span>
+                              <span className="font-semibold">
+                                {money(
+                                  recipient.orderTotalCents,
+                                  recipient.currency,
+                                )}
+                              </span>
+                            </div>
                           </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Preparar e-mail para ${recipient.name}`}
+                                onClick={() => prepareIndividual(recipient.id)}
+                              >
+                                <Mail />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Preparar envio individual
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={`Preparar e-mail para ${recipient.name}`}
-                              onClick={() => prepareIndividual(recipient.id)}
+                      );
+                    })}
+                  </div>
+                  <div className="hidden overflow-x-auto rounded-md border sm:block">
+                    <table className="w-full min-w-[660px] text-sm">
+                      <thead className="bg-muted/50 text-muted-foreground">
+                        <tr>
+                          <th className="w-10 px-3 py-2 text-left">Sel.</th>
+                          <th className="px-3 py-2 text-left">Cliente</th>
+                          <th className="px-3 py-2 text-left">Produto</th>
+                          <th className="px-3 py-2 text-left">Pedido</th>
+                          <th className="px-3 py-2 text-right">Valor</th>
+                          <th className="w-12 px-3 py-2">
+                            <span className="sr-only">Ação</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-border divide-y">
+                        {activeSegmentRecipients.map((recipient) => {
+                          return (
+                            <tr
+                              key={recipient.id}
+                              className="hover:bg-muted/30"
                             >
-                              <Mail />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Preparar envio individual
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    );
-                  })}
+                              <td className="px-3 py-2">
+                                <input
+                                  type="checkbox"
+                                  checked
+                                  disabled
+                                  readOnly
+                                  aria-label={`Selecionar ${recipient.name}`}
+                                  className="accent-primary size-4"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <div className="font-medium">
+                                  {recipient.name}
+                                </div>
+                                <div className="text-muted-foreground text-xs">
+                                  {recipient.email}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2">
+                                {recipient.productName ?? "—"}
+                              </td>
+                              <td className="px-3 py-2 font-mono text-xs">
+                                {recipient.orderReference ?? "—"}
+                              </td>
+                              <td className="px-3 py-2 text-right font-medium">
+                                {money(
+                                  recipient.orderTotalCents,
+                                  recipient.currency,
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      aria-label={`Preparar e-mail para ${recipient.name}`}
+                                      onClick={() =>
+                                        prepareIndividual(recipient.id)
+                                      }
+                                    >
+                                      <Mail />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    Preparar envio individual
+                                  </TooltipContent>
+                                </Tooltip>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-                <div className="hidden overflow-x-auto rounded-md border sm:block">
-                  <table className="w-full min-w-[660px] text-sm">
-                    <thead className="bg-muted/50 text-muted-foreground">
-                      <tr>
-                        <th className="w-10 px-3 py-2 text-left">Sel.</th>
-                        <th className="px-3 py-2 text-left">Cliente</th>
-                        <th className="px-3 py-2 text-left">Produto</th>
-                        <th className="px-3 py-2 text-left">Pedido</th>
-                        <th className="px-3 py-2 text-right">Valor</th>
-                        <th className="w-12 px-3 py-2">
-                          <span className="sr-only">Ação</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-border divide-y">
-                      {activeSegmentRecipients.map((recipient) => {
-                        return (
-                          <tr key={recipient.id} className="hover:bg-muted/30">
-                            <td className="px-3 py-2">
-                              <input
-                                type="checkbox"
-                                checked
-                                disabled
-                                readOnly
-                                aria-label={`Selecionar ${recipient.name}`}
-                                className="accent-primary size-4"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="font-medium">
-                                {recipient.name}
-                              </div>
-                              <div className="text-muted-foreground text-xs">
-                                {recipient.email}
-                              </div>
-                            </td>
-                            <td className="px-3 py-2">
-                              {recipient.productName ?? "—"}
-                            </td>
-                            <td className="px-3 py-2 font-mono text-xs">
-                              {recipient.orderReference ?? "—"}
-                            </td>
-                            <td className="px-3 py-2 text-right font-medium">
-                              {money(
-                                recipient.orderTotalCents,
-                                recipient.currency,
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    aria-label={`Preparar e-mail para ${recipient.name}`}
-                                    onClick={() =>
-                                      prepareIndividual(recipient.id)
-                                    }
-                                  >
-                                    <Mail />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Preparar envio individual
-                                </TooltipContent>
-                              </Tooltip>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+              )}
 
             <div className="grid items-start gap-6 border-t pt-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(460px,1.1fr)]">
               {informational ? (
                 <StoreNoticeEditor
-                  audience={segment === "paid" ? "paid" : "all"}
+                  audience={
+                    segment === "custom"
+                      ? "custom"
+                      : segment === "paid" ||
+                          segment === "imported_paid" ||
+                          segment === "imported_pending"
+                        ? segment
+                        : "all"
+                  }
+                  hideSubject
                   value={notificationPreferences}
                   onChange={setNotificationPreferences}
                   link={noticeLink}

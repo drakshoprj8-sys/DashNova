@@ -19,6 +19,7 @@ import {
 import type { DashboardSnapshot } from "@/features/dashboard/queries";
 import { formatMoney, formatNumber, formatPercent } from "@/lib/format";
 import { MetricCard } from "@/features/dashboard/metric-card";
+import { CustomerBaseSummary } from "@/features/dashboard/customer-base-summary";
 import { OperationalMetrics } from "@/features/dashboard/operational-metrics";
 import { OrderStatusCard } from "@/features/dashboard/order-status-card";
 import { PeriodSelector } from "@/features/dashboard/period-selector";
@@ -205,6 +206,7 @@ export function DashboardView() {
 
         {status === "success" && data ? (
           <>
+            <CustomerBaseSummary refreshKey={data.generatedAt} />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard
                 label="Receita"
