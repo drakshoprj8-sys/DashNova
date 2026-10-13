@@ -367,7 +367,7 @@ export async function getConsolidatedCustomerCounts(): Promise<ConsolidatedCusto
       )::int`,
       approved: sql<number>`count(*) filter (where
         coalesce(${customers.tags}, '[]'::jsonb) @> ${IMPORTED_PAID_STATUS}::jsonb
-        or exists (select 1 from orders o where o.customer_id = ${customers.id}
+        or exists (select 1 from orders o where o.customer_id = customers.id
           and o.workspace_id = ${workspaceId} and o.status in ('paid','preparing','shipped','delivered'))
       )::int`,
     })
