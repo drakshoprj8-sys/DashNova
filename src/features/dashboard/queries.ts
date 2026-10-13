@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, sql } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/database/client";
 import {
@@ -21,7 +21,9 @@ import {
   type DashboardPeriod,
 } from "@/features/dashboard/period";
 
-const PAID_SQL = sql`${orders.status} in ('paid','shipped','delivered')`;
+const PAID_SQL = sql`${orders.status} in ('paid','preparing','shipped','delivered')`;
+const PAID_DATE = sql`coalesce(${orders.paidAt}, ${orders.createdAt})`;
+const CHART_DATE = sql`case when ${PAID_SQL} then ${PAID_DATE} else ${orders.createdAt} end`;
 
 export interface ChartPoint {
   /** Rótulo já pronto para eixo X (hora, dia ou semana, pt-BR). */
@@ -143,15 +145,17 @@ async function getNetRevenue(
 ): Promise<{ grossCents: number; ordersCount: number; refundedCents: number }> {
   const [gross] = await db
     .select({
-      grossCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_SQL}), 0)::int`,
-      ordersCount: sql<number>`count(*)::int`,
+      grossCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_SQL} and ${PAID_DATE} >= ${start} and ${PAID_DATE} < ${end}), 0)::int`,
+      ordersCount: sql<number>`count(*) filter (where ${orders.createdAt} >= ${start} and ${orders.createdAt} < ${end})::int`,
     })
     .from(orders)
     .where(
       and(
         eq(orders.workspaceId, workspaceId),
-        gte(orders.createdAt, start),
-        lt(orders.createdAt, end),
+        or(
+          and(gte(orders.createdAt, start), lt(orders.createdAt, end)),
+          and(gte(PAID_DATE, start), lt(PAID_DATE, end)),
+        ),
       ),
     );
 
@@ -206,8 +210,8 @@ export async function getDashboardSnapshot(
         and(
           ws,
           PAID_SQL,
-          gte(orders.createdAt, range.start),
-          lt(orders.createdAt, range.end),
+          gte(PAID_DATE, range.start),
+          lt(PAID_DATE, range.end),
         ),
       ),
     db
@@ -217,8 +221,8 @@ export async function getDashboardSnapshot(
         and(
           ws,
           PAID_SQL,
-          gte(orders.createdAt, range.previousStart),
-          lt(orders.createdAt, range.previousEnd),
+          gte(PAID_DATE, range.previousStart),
+          lt(PAID_DATE, range.previousEnd),
         ),
       ),
   ]);
@@ -276,18 +280,12 @@ export async function getDashboardSnapshot(
         : "day";
   const seriesRows = await db
     .select({
-      bucket: sql<Date>`date_trunc(${truncUnit}, ${orders.createdAt} at time zone 'America/Sao_Paulo')`,
+      bucket: sql<Date>`date_trunc(${truncUnit}, ${CHART_DATE} at time zone 'America/Sao_Paulo')`,
       revenueCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_SQL}), 0)::int`,
       ordersCount: sql<number>`count(*)::int`,
     })
     .from(orders)
-    .where(
-      and(
-        ws,
-        gte(orders.createdAt, range.start),
-        lt(orders.createdAt, range.end),
-      ),
-    )
+    .where(and(ws, gte(CHART_DATE, range.start), lt(CHART_DATE, range.end)))
     .groupBy(sql`1`)
     .orderBy(sql`1`);
 
@@ -311,12 +309,7 @@ export async function getDashboardSnapshot(
     .innerJoin(orders, eq(orderItems.orderId, orders.id))
     .leftJoin(products, eq(orderItems.productId, products.id))
     .where(
-      and(
-        ws,
-        PAID_SQL,
-        gte(orders.createdAt, range.start),
-        lt(orders.createdAt, range.end),
-      ),
+      and(ws, PAID_SQL, gte(PAID_DATE, range.start), lt(PAID_DATE, range.end)),
     )
     .groupBy(
       orderItems.productId,
@@ -338,11 +331,19 @@ export async function getDashboardSnapshot(
   const todayRange = resolvePeriodRange("today", now);
   const [todayRow] = await db
     .select({
-      revenueCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_SQL}), 0)::int`,
-      ordersCount: sql<number>`count(*)::int`,
+      revenueCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_SQL} and ${PAID_DATE} >= ${todayRange.start} and ${PAID_DATE} < ${todayRange.end}), 0)::int`,
+      ordersCount: sql<number>`count(*) filter (where ${orders.createdAt} >= ${todayRange.start} and ${orders.createdAt} < ${todayRange.end})::int`,
     })
     .from(orders)
-    .where(and(ws, gte(orders.createdAt, todayRange.start)));
+    .where(
+      and(
+        ws,
+        or(
+          gte(orders.createdAt, todayRange.start),
+          gte(PAID_DATE, todayRange.start),
+        ),
+      ),
+    );
 
   // Clientes únicos com pedido no período (não apenas clientes cadastrados).
   const [customersRow] = await db

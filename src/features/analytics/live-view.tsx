@@ -37,6 +37,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePaymentSync } from "@/features/payments/use-payment-sync";
 
 /** O globo carrega three.js — só entra no browser e fora do bundle inicial. */
 const LiveGlobe = dynamic(
@@ -350,6 +351,7 @@ function TopProductsCard({ data }: { data: LiveSnapshot | null }) {
 type ConnState = "connected" | "reconnecting" | "disconnected";
 
 export function LiveView() {
+  usePaymentSync();
   const [data, setData] = React.useState<LiveSnapshot | null>(null);
   const [conn, setConn] = React.useState<ConnState>("reconnecting");
   const [loading, setLoading] = React.useState(true);

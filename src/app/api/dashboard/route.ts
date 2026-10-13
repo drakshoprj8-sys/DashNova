@@ -33,5 +33,5 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json(snapshot);
+  return NextResponse.json(snapshot, { headers: { "Cache-Control": "private, no-store" } });
 }

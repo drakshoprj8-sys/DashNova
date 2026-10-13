@@ -63,6 +63,7 @@ import type { ProductOption } from "@/features/products/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
+import { usePaymentSync } from "@/features/payments/use-payment-sync";
 
 const DEFAULT_PAGE_SIZE = 25;
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
@@ -182,6 +183,11 @@ export function CarrinhosView({ products }: { products: ProductOption[] }) {
   // mesmo queryString (usado pelo botão "Atualizar dados" e após mutações).
   const [refetchToken, setRefetchToken] = React.useState(0);
   const fetchData = React.useCallback(() => setRefetchToken((t) => t + 1), []);
+  usePaymentSync(fetchData);
+  React.useEffect(() => {
+    const timer = window.setInterval(() => { if (document.visibilityState === "visible") fetchData(); }, 15_000);
+    return () => window.clearInterval(timer);
+  }, [fetchData]);
 
   React.useEffect(() => {
     const controller = new AbortController();

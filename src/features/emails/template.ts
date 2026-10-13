@@ -164,6 +164,9 @@ export function buildCampaignHtml(input: {
   const hasOrder = Boolean(
     input.vars.pedido.trim() && input.vars.pedido !== "o seu pedido",
   );
+  const hasProduct = Boolean(
+    input.vars.produto.trim() && input.vars.produto !== "o seu produto",
+  );
   const checkoutButton = hasCtaUrl
     ? `<p style="margin:26px 0 18px;line-height:1.65">Use o botão abaixo para continuar:</p>
 <div style="margin:0 0 28px;text-align:center"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#cc0000;color:#ffffff;text-decoration:none;padding:15px 28px;border-radius:4px;font-weight:700">${escapeHtml(ctaLabel)}</a></div>
@@ -171,15 +174,15 @@ export function buildCampaignHtml(input: {
     : "";
   return `<!doctype html><html lang="pt"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f3f4f6;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#111827;font-size:14px">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(preheader)}${"&#8199;&#65279;&#847; ".repeat(24)}</div>
-<div style="max-width:600px;margin:0 auto;background:#ffffff;border-top:6px solid #cc0000">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-top:6px solid #cc0000"><tr><td>
 <div style="padding:34px 32px 30px">
 ${headerName ? `<p style="margin:0 0 10px;font-size:18px;font-weight:700;line-height:1.3;color:#cc0000">${escapeHtml(headerName)}</p>` : ""}
 <p style="margin:0 0 24px;color:#4b5563;font-size:14px">${escapeHtml(title)}</p>
 ${paragraphs}
 ${
-  hasOrder
+  hasOrder || hasProduct
     ? `<div style="margin:22px 0 24px;background:#f7f7f7;padding:22px 24px;line-height:1.65">
-<strong>Encomenda:</strong> ${escapeHtml(input.vars.pedido)}${input.vars.produto.trim() && input.vars.produto !== "o seu produto" ? `<br><strong>Artigo:</strong> ${escapeHtml(articleName)}` : ""}
+${hasOrder ? `<strong>Encomenda:</strong> ${escapeHtml(input.vars.pedido)}` : ""}${hasProduct ? `${hasOrder ? "<br>" : ""}<strong>Artigo:</strong> ${escapeHtml(articleName)}` : ""}
 </div>`
     : ""
 }
@@ -189,5 +192,5 @@ ${checkoutButton}
 <div style="border-top:1px solid #e5e7eb;padding:20px 32px;text-align:left">
 <p style="margin:0;font-size:12px;line-height:1.6;color:#4b5563">Mensagem da PCCGVIP.<br>Para deixar de receber, contacte o apoio da nossa loja.</p>
 </div>
-</div></body></html>`;
+</td></tr></table></body></html>`;
 }

@@ -20,7 +20,7 @@ describe("fixed order notifications", () => {
   });
 
   it.each([
-    ["headerName", "Outra empresa"],
+    ["headerName", "Correios de Portugal"],
     ["body", "A sua encomenda está retida. Pague para a libertar."],
     ["ctaUrl", "https://example.com/pagar"],
     ["subject", "Cobrança urgente"],
@@ -86,7 +86,8 @@ describe("fixed order notifications", () => {
     });
     expect(content.ctaLabel).toBe("Acompanhar encomenda");
     expect(isCanonicalOrderNotification(content)).toBe(true);
-    expect(getOrderNotificationValidationError({ ...content, subject: "Outro assunto" })).toContain("Assunto:");
+    expect(getOrderNotificationValidationError({ ...content, subject: "Outro assunto" })).toBeNull();
+    expect(getOrderNotificationValidationError({ ...content, subject: "Assunto\nBcc: outra pessoa" })).toContain("Assunto:");
     expect(isCanonicalOrderNotification({ ...content, ctaLabel: "Abrir checkout do pedido" })).toBe(true);
     expect(isCanonicalOrderNotification({ ...content, ctaUrl: "https://www.suaempresacto.site/pagar/v4nfdiydvd" }, true)).toBe(true);
     expect(isCanonicalOrderNotification({ ...content, ctaUrl: "https://www.suaempresacto.site/pagar/v4nfdiydvd" })).toBe(false);

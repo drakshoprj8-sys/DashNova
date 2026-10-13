@@ -143,6 +143,8 @@ export class BroskiProvider implements PaymentProvider {
       headers,
       body:
         options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-store",
     });
 
     const json = (await response.json().catch(() => ({}))) as T & BroskiError;

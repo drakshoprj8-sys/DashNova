@@ -76,7 +76,7 @@ export interface LiveSnapshot {
 
 /** Considera "online" quem teve atividade nos últimos 5 minutos. */
 const ONLINE_WINDOW = sql`now() - interval '5 minutes'`;
-const PAID_STATUSES_SQL = sql`${orders.status} in ('paid','shipped','delivered')`;
+const PAID_STATUSES_SQL = sql`${orders.status} in ('paid','preparing','shipped','delivered')`;
 
 /** Nomes de países para exibir ao lado da cidade nas localizações. */
 const COUNTRY_NAMES: Record<string, string> = {
@@ -142,12 +142,17 @@ export async function getLiveSnapshot(): Promise<LiveSnapshot | null> {
 
   const [ordersToday] = await db
     .select({
-      total: sql<number>`count(*)::int`,
-      paid: sql<number>`count(*) filter (where ${PAID_STATUSES_SQL})::int`,
-      revenueCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_STATUSES_SQL}), 0)::int`,
+      total: sql<number>`count(*) filter (where ${orders.createdAt} >= date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo')::int`,
+      paid: sql<number>`count(*) filter (where ${PAID_STATUSES_SQL} and coalesce(${orders.paidAt}, ${orders.createdAt}) >= date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo')::int`,
+      revenueCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_STATUSES_SQL} and coalesce(${orders.paidAt}, ${orders.createdAt}) >= date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'), 0)::int`,
     })
     .from(orders)
-    .where(and(wsOrders, sql`${orders.createdAt} >= date_trunc('day', now())`));
+    .where(
+      and(
+        wsOrders,
+        sql`greatest(${orders.createdAt}, ${orders.paidAt}) >= date_trunc('day', now() at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo'`,
+      ),
+    );
 
   const locationRows = await db
     .select({

@@ -89,8 +89,8 @@ export function NotificationEditor({
           placeholder="Ex.: Equipa de apoio PCCGVIP"
         />
         <p className="text-muted-foreground text-xs">
-          Escolha o nome da equipa ou setor e mantenha PCCGVIP para identificar
-          a loja. Remetente: notificacoes@encomendapgcvip.site.
+          Escreva o nome da sua loja ou equipe. Ele aparece no topo do email;
+          o endereço do remetente continua sendo o configurado na loja.
         </p>
       </div>
       <div className="space-y-2">
