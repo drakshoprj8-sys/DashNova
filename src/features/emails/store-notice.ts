@@ -72,19 +72,24 @@ export function getStoreNoticeValidationError(
   );
   if (noteError)
     return "Mensagem: use informações da loja, sem links, cobranças ou alegações de retenção.";
-  const visibleText = [
-    content.subject,
-    content.preheader,
-    content.headerName,
-    content.title,
-    note,
-  ].join("\n");
-  if (
-    /\b(?:correios|ctt)\b|\{\{\s*(?!PRIMEIRO_NOME\s*\}\}|NOME\s*\}\}|NOME_CLIENTE\s*\}\}|EMAIL\s*\}\}|PRODUTO\s*\}\})[^}]*\}\}/i.test(
-      visibleText,
-    )
-  ) {
-    return "Use a identidade da sua loja e apenas as variáveis de nome, e-mail e produto neste comunicado.";
+  for (const [label, value] of [
+    ["Assunto", content.subject],
+    ["Texto de pré-visualização", content.preheader],
+    ["Nome no cabeçalho", content.headerName],
+    ["Título interno", content.title],
+    ["Mensagem", note],
+  ] as const) {
+    const text = typeof value === "string" ? value : "";
+    if (/\b(?:correios|ctt)\b/i.test(text)) {
+      return `${label}: use o nome da sua loja ou equipe. Correios e CTT não podem identificar o remetente deste comunicado.`;
+    }
+    if (
+      /\{\{\s*(?!PRIMEIRO_NOME\s*\}\}|NOME\s*\}\}|NOME_CLIENTE\s*\}\}|EMAIL\s*\}\}|PRODUTO\s*\}\})[^}]*\}\}/i.test(
+        text,
+      )
+    ) {
+      return `${label}: variável não reconhecida. Use {{PRIMEIRO_NOME}}, {{NOME}}, {{NOME_CLIENTE}}, {{EMAIL}} ou {{PRODUTO}}.`;
+    }
   }
   for (const [field, label, limit, minimum] of [
     ["subject", "Assunto", 160, 3],

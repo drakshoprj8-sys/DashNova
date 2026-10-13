@@ -12,6 +12,61 @@ import {
 afterEach(cleanup);
 
 describe("comunicado informativo para todos", () => {
+  it.each([
+    "Milluni Shopping",
+    "Atendimento da minha loja",
+    "Equipe Victor Silva",
+  ])("permite o nome de loja ou equipe %s no cabeçalho", (headerName) => {
+    expect(
+      getStoreNoticeValidationError(
+        buildStoreNoticeContent({ ...STORE_NOTICE_PREFERENCES, headerName }),
+      ),
+    ).toBeNull();
+  });
+
+  it.each(["Correios De Portugal", "CTT PCCGVIP"])(
+    "identifica o campo bloqueado para %s sem confundir com variáveis",
+    (headerName) => {
+      const error = getStoreNoticeValidationError(
+        buildStoreNoticeContent({ ...STORE_NOTICE_PREFERENCES, headerName }),
+      );
+      expect(error).toBe(
+        "Nome no cabeçalho: use o nome da sua loja ou equipe. Correios e CTT não podem identificar o remetente deste comunicado.",
+      );
+    },
+  );
+
+  it("distingue uma variável desconhecida de um nome no cabeçalho", () => {
+    const error = getStoreNoticeValidationError(
+      buildStoreNoticeContent({
+        ...STORE_NOTICE_PREFERENCES,
+        subject: "Novidades para {{CLIENTE}}",
+        headerName: "Atendimento da minha loja",
+      }),
+    );
+    expect(error).toContain("Assunto: variável não reconhecida.");
+    expect(error).not.toContain("Correios");
+  });
+
+  it("limpa o erro do campo quando o cabeçalho usa o nome da loja", () => {
+    function Harness() {
+      const [value, setValue] = React.useState({
+        ...STORE_NOTICE_PREFERENCES,
+        headerName: "Correios De Portugal",
+      });
+      return <StoreNoticeEditor value={value} onChange={setValue} />;
+    }
+    render(<Harness />);
+    const field = screen.getByLabelText("Nome no cabeçalho");
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Nome no cabeçalho:",
+    );
+    fireEvent.change(field, { target: { value: "Atendimento da minha loja" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(field.getAttribute("aria-invalid")).toBeNull();
+  });
+
   it("aceita assunto e cabeçalho personalizados sem mudar o remetente ou inventar uma compra", () => {
     const content = buildStoreNoticeContent({
       ...STORE_NOTICE_PREFERENCES,

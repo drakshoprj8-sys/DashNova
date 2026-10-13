@@ -84,13 +84,25 @@ export function StoreNoticeEditor({
               name={field}
               value={value[field]}
               maxLength={limit}
+              aria-invalid={error?.startsWith(`${label}:`) || undefined}
+              aria-describedby={
+                error?.startsWith(`${label}:`)
+                  ? "storeNoticeError"
+                  : field === "headerName"
+                    ? "storeNoticeHeaderHelp"
+                    : undefined
+              }
               onChange={(event) =>
                 onChange({ ...value, [field]: event.target.value })
               }
             />
             {field === "headerName" ? (
-              <p className="text-muted-foreground text-xs">
-                O nome aparece no topo do email. O endereço do remetente
+              <p
+                id="storeNoticeHeaderHelp"
+                className="text-muted-foreground text-xs"
+              >
+                Use o nome da sua loja ou equipe, como “Atendimento PCCGVIP”.
+                Esse nome aparece no topo do email. O endereço do remetente
                 continua sendo o configurado na loja.
               </p>
             ) : null}
@@ -178,7 +190,11 @@ export function StoreNoticeEditor({
         )}
       </div>
       {error && (
-        <p role="alert" className="text-destructive text-xs">
+        <p
+          id="storeNoticeError"
+          role="alert"
+          className="text-destructive text-xs"
+        >
           {error}
         </p>
       )}
