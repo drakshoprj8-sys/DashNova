@@ -11,8 +11,28 @@ import * as schema from "./schema";
  */
 let _db: ReturnType<typeof createDb> | null = null;
 
+/**
+ * URL do banco. Usa DATABASE_URL; se não existir, cai para POSTGRES_URL,
+ * que a integração oficial Supabase ↔ Vercel cria automaticamente (pooler,
+ * porta 6543). Parâmetros que não são do Postgres (`supa`, `pgbouncer`)
+ * são removidos — o postgres.js os enviaria ao servidor como parâmetros de
+ * conexão e o pooler recusaria.
+ */
+function resolveDatabaseUrl(): string | undefined {
+  const raw = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!raw) return undefined;
+  try {
+    const parsed = new URL(raw);
+    parsed.searchParams.delete("supa");
+    parsed.searchParams.delete("pgbouncer");
+    return parsed.toString();
+  } catch {
+    return raw;
+  }
+}
+
 function createDb() {
-  const url = process.env.DATABASE_URL;
+  const url = resolveDatabaseUrl();
   if (!url) {
     throw new Error(
       "DATABASE_URL não configurada. Configure o Supabase para acessar o banco (ver docs/DEPLOY.md).",
@@ -28,7 +48,7 @@ export function getDb() {
 }
 
 export function isDatabaseConfigured(): boolean {
-  return Boolean(process.env.DATABASE_URL);
+  return Boolean(resolveDatabaseUrl());
 }
 
 export type Database = ReturnType<typeof getDb>;
