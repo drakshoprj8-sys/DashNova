@@ -25,6 +25,7 @@ export function matchesGatewayPayment(
   expected: {
     externalId: string;
     orderId: string;
+    orderReference?: string;
     amountCents: number;
     currency: string;
     method: string;
@@ -44,6 +45,8 @@ export function matchesGatewayPayment(
     actual.amountCents === expected.amountCents &&
     actual.currency.toUpperCase() === expected.currency.toUpperCase() &&
     actual.method === expected.method &&
-    (reference == null || reference === expected.orderId)
+    (reference == null ||
+      reference === expected.orderId ||
+      reference === expected.orderReference)
   );
 }

@@ -145,8 +145,8 @@ async function getNetRevenue(
 ): Promise<{ grossCents: number; ordersCount: number; refundedCents: number }> {
   const [gross] = await db
     .select({
-      grossCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_SQL} and ${PAID_DATE} >= ${start} and ${PAID_DATE} < ${end}), 0)::int`,
-      ordersCount: sql<number>`count(*) filter (where ${orders.createdAt} >= ${start} and ${orders.createdAt} < ${end})::int`,
+      grossCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_SQL} and ${PAID_DATE} >= ${start.toISOString()} and ${PAID_DATE} < ${end.toISOString()}), 0)::int`,
+      ordersCount: sql<number>`count(*) filter (where ${orders.createdAt} >= ${start.toISOString()} and ${orders.createdAt} < ${end.toISOString()})::int`,
     })
     .from(orders)
     .where(
@@ -154,7 +154,10 @@ async function getNetRevenue(
         eq(orders.workspaceId, workspaceId),
         or(
           and(gte(orders.createdAt, start), lt(orders.createdAt, end)),
-          and(gte(PAID_DATE, start), lt(PAID_DATE, end)),
+          and(
+            gte(PAID_DATE, start.toISOString()),
+            lt(PAID_DATE, end.toISOString()),
+          ),
         ),
       ),
     );
@@ -210,8 +213,8 @@ export async function getDashboardSnapshot(
         and(
           ws,
           PAID_SQL,
-          gte(PAID_DATE, range.start),
-          lt(PAID_DATE, range.end),
+          gte(PAID_DATE, range.start.toISOString()),
+          lt(PAID_DATE, range.end.toISOString()),
         ),
       ),
     db
@@ -221,8 +224,8 @@ export async function getDashboardSnapshot(
         and(
           ws,
           PAID_SQL,
-          gte(PAID_DATE, range.previousStart),
-          lt(PAID_DATE, range.previousEnd),
+          gte(PAID_DATE, range.previousStart.toISOString()),
+          lt(PAID_DATE, range.previousEnd.toISOString()),
         ),
       ),
   ]);
@@ -285,7 +288,13 @@ export async function getDashboardSnapshot(
       ordersCount: sql<number>`count(*)::int`,
     })
     .from(orders)
-    .where(and(ws, gte(CHART_DATE, range.start), lt(CHART_DATE, range.end)))
+    .where(
+      and(
+        ws,
+        gte(CHART_DATE, range.start.toISOString()),
+        lt(CHART_DATE, range.end.toISOString()),
+      ),
+    )
     .groupBy(sql`1`)
     .orderBy(sql`1`);
 
@@ -309,7 +318,12 @@ export async function getDashboardSnapshot(
     .innerJoin(orders, eq(orderItems.orderId, orders.id))
     .leftJoin(products, eq(orderItems.productId, products.id))
     .where(
-      and(ws, PAID_SQL, gte(PAID_DATE, range.start), lt(PAID_DATE, range.end)),
+      and(
+        ws,
+        PAID_SQL,
+        gte(PAID_DATE, range.start.toISOString()),
+        lt(PAID_DATE, range.end.toISOString()),
+      ),
     )
     .groupBy(
       orderItems.productId,
@@ -331,8 +345,8 @@ export async function getDashboardSnapshot(
   const todayRange = resolvePeriodRange("today", now);
   const [todayRow] = await db
     .select({
-      revenueCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_SQL} and ${PAID_DATE} >= ${todayRange.start} and ${PAID_DATE} < ${todayRange.end}), 0)::int`,
-      ordersCount: sql<number>`count(*) filter (where ${orders.createdAt} >= ${todayRange.start} and ${orders.createdAt} < ${todayRange.end})::int`,
+      revenueCents: sql<number>`coalesce(sum(${orders.totalCents}) filter (where ${PAID_SQL} and ${PAID_DATE} >= ${todayRange.start.toISOString()} and ${PAID_DATE} < ${todayRange.end.toISOString()}), 0)::int`,
+      ordersCount: sql<number>`count(*) filter (where ${orders.createdAt} >= ${todayRange.start.toISOString()} and ${orders.createdAt} < ${todayRange.end.toISOString()})::int`,
     })
     .from(orders)
     .where(
@@ -340,7 +354,7 @@ export async function getDashboardSnapshot(
         ws,
         or(
           gte(orders.createdAt, todayRange.start),
-          gte(PAID_DATE, todayRange.start),
+          gte(PAID_DATE, todayRange.start.toISOString()),
         ),
       ),
     );
