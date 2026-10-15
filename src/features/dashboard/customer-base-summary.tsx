@@ -8,9 +8,19 @@ export function CustomerBaseSummary({ refreshKey }: { refreshKey: string }) {
   const [stats, setStats] = React.useState<CustomerStats | null>(null);
   const [failed, setFailed] = React.useState(false);
   const [retry, setRetry] = React.useState(0);
+
+  // Reset durante a renderização (não no efeito, que o
+  // `react-hooks/set-state-in-effect` recusa) sempre que um novo pedido
+  // começa — por atualização do painel ou por "Tentar novamente".
+  const requestKey = `${refreshKey}:${retry}`;
+  const [prevRequestKey, setPrevRequestKey] = React.useState(requestKey);
+  if (requestKey !== prevRequestKey) {
+    setPrevRequestKey(requestKey);
+    setFailed(false);
+  }
+
   React.useEffect(() => {
     const controller = new AbortController();
-    setFailed(false);
     void fetch("/api/customers/stats", {
       cache: "no-store",
       signal: controller.signal,

@@ -30,10 +30,20 @@ export function AudienceSelector({
   const [busy, setBusy] = React.useState(true);
   const [error, setError] = React.useState("");
   const [retry, setRetry] = React.useState(0);
-  React.useEffect(() => {
-    const controller = new AbortController();
+
+  // Reset durante a renderização (não no efeito, que o
+  // `react-hooks/set-state-in-effect` recusa): cada mudança de filtro, página
+  // ou nova tentativa mostra "Carregando" de imediato, sem esperar o debounce.
+  const requestKey = JSON.stringify([segment, q, from, to, page, retry]);
+  const [prevRequestKey, setPrevRequestKey] = React.useState(requestKey);
+  if (requestKey !== prevRequestKey) {
+    setPrevRequestKey(requestKey);
     setBusy(true);
     setError("");
+  }
+
+  React.useEffect(() => {
+    const controller = new AbortController();
     const timeout = setTimeout(() => {
       const params = new URLSearchParams({
         segment,
