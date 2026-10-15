@@ -54,6 +54,8 @@ export interface Recipient {
   checkoutUrl: string | null;
   orderTotalCents: number | null;
   currency: string | null;
+  /** Estado do pedido verificado, usado para a variável {{STATUS}}. */
+  orderStatus?: string | null;
   createdAt?: string;
 }
 

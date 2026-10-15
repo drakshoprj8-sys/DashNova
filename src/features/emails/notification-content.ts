@@ -5,6 +5,7 @@ export const NOTIFICATION_OPTIONS = {
     DEFAULT_CAMPAIGN_TEMPLATE.subject,
     "{{PRIMEIRO_NOME}}, informações do seu pedido na PCCGVIP",
     "PCCGVIP — resumo do pedido {{PEDIDO}}",
+    "PCCGVIP — pedido {{PEDIDO}} confirmado",
   ],
   preheader: [
     DEFAULT_CAMPAIGN_TEMPLATE.preheader,
@@ -16,6 +17,7 @@ export const NOTIFICATION_OPTIONS = {
     DEFAULT_CAMPAIGN_TEMPLATE.title,
     "Resumo do seu pedido na PCCGVIP",
     "Os dados da sua compra na PCCGVIP",
+    "Confirmação do seu pedido na PCCGVIP",
   ],
 } as const;
 
@@ -40,6 +42,36 @@ export const MESSAGE_OPTIONS = {
       label: "Referência e artigo",
       value:
         "Somos a equipa da PCCGVIP. O seu pedido tem a referência {{PEDIDO}} e inclui o artigo {{PRODUTO}}.",
+    },
+    {
+      label: "Confirmação do pedido",
+      value:
+        "Somos a equipa da PCCGVIP. O seu pedido {{PEDIDO}} está confirmado e reunimos abaixo os dados para acompanhar a entrega.",
+    },
+    {
+      label: "Estado do pedido",
+      value:
+        "Somos a equipa da PCCGVIP. O estado atual do seu pedido {{PEDIDO}} é: {{STATUS}}.",
+    },
+    {
+      label: "Pedido em preparação",
+      value:
+        "Somos a equipa da PCCGVIP. O seu pedido {{PEDIDO}} está em preparação e será enviado em breve.",
+    },
+    {
+      label: "Pedido enviado",
+      value:
+        "Somos a equipa da PCCGVIP. O seu pedido {{PEDIDO}} foi enviado e está a caminho da morada indicada.",
+    },
+    {
+      label: "Pedido entregue",
+      value:
+        "Somos a equipa da PCCGVIP. O seu pedido {{PEDIDO}} foi entregue. Obrigado pela preferência.",
+    },
+    {
+      label: "Compra não concluída (recuperação)",
+      value:
+        "Somos a equipa da PCCGVIP. Iniciou uma compra connosco com a referência {{PEDIDO}} e ainda não a concluiu. Pode retomá-la quando quiser pelo botão abaixo; nada será cobrado automaticamente.",
     },
   ],
   support: [
@@ -91,6 +123,35 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   closing: 0,
   showValue: true,
   customMessage: "",
+};
+
+/**
+ * Preset padrão de atualização de pedido: usa o estado real do pedido
+ * ({{STATUS}}) e um botão que leva ao acompanhamento verdadeiro. Index 4 das
+ * introduções corresponde a "Estado do pedido".
+ */
+export const ORDER_UPDATE_PREFERENCES: NotificationPreferences = {
+  ...DEFAULT_NOTIFICATION_PREFERENCES,
+  subject: "PCCGVIP — atualização do pedido {{PEDIDO}}",
+  title: "Atualização do seu pedido na PCCGVIP",
+  introduction: 4,
+  ctaLabel: "Acompanhar o meu pedido",
+};
+
+/**
+ * Preset de recuperação de compra (carrinho abandonado). Dirige-se a quem gerou
+ * uma referência e não concluiu o pagamento: usa a introdução de recuperação
+ * (index 8), mostra o valor real e um botão que leva ao checkout verdadeiro do
+ * próprio pedido pendente — validado no servidor. Mantém o mesmo visual da
+ * atualização de pedido, sem alegações de retenção ou cobrança.
+ */
+export const RECOVERY_PREFERENCES: NotificationPreferences = {
+  ...DEFAULT_NOTIFICATION_PREFERENCES,
+  subject: "PCCGVIP — a sua compra ficou a meio",
+  preheader: "Retome a sua compra na PCCGVIP quando quiser.",
+  title: "A sua compra ficou a meio",
+  introduction: 8,
+  ctaLabel: "Retomar a minha compra",
 };
 
 export function buildNotificationContent(preferences: NotificationPreferences) {

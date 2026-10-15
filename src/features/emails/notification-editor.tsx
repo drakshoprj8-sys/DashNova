@@ -24,6 +24,7 @@ export function NotificationEditor({
   previewCheckoutUrl,
   requestedCheckoutUrl = "",
   onRequestedCheckoutUrlChange,
+  restoreDefaults = DEFAULT_NOTIFICATION_PREFERENCES,
 }: {
   value: NotificationPreferences;
   onChange: (value: NotificationPreferences) => void;
@@ -31,6 +32,7 @@ export function NotificationEditor({
   previewCheckoutUrl?: string | null;
   requestedCheckoutUrl?: string;
   onRequestedCheckoutUrlChange?: (value: string) => void;
+  restoreDefaults?: NotificationPreferences;
 }) {
   const content = {
     ...buildNotificationContent(value),
@@ -52,8 +54,8 @@ export function NotificationEditor({
           variant="ghost"
           size="sm"
           onClick={() => onChange({
-            ...DEFAULT_NOTIFICATION_PREFERENCES,
-            ctaLabel: destinationKind === "checkout" ? "Abrir checkout do pedido" : DEFAULT_NOTIFICATION_PREFERENCES.ctaLabel,
+            ...restoreDefaults,
+            ctaLabel: restoreDefaults.ctaLabel,
           })}
         >
           <RotateCcw className="size-3.5" /> Restaurar padrão
@@ -230,6 +232,7 @@ export function NotificationEditor({
           "{{PEDIDO}}",
           "{{PRODUTO}}",
           "{{VALOR}}",
+          "{{STATUS}}",
           "{{CHECKOUT_URL}}",
           "{{LOJA_URL}}",
         ].map((token) => (
