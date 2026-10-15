@@ -307,7 +307,7 @@ export async function processBroskiEvent(
               status: event.status,
               approvedAt:
                 event.status === "approved"
-                  ? sql`coalesce(${payments.approvedAt}, ${confirmedAt})`
+                  ? sql`coalesce(${payments.approvedAt}, ${confirmedAt.toISOString()})`
                   : undefined,
               updatedAt: now,
             })
@@ -332,7 +332,7 @@ export async function processBroskiEvent(
                   newOrderStatus as (typeof orders.$inferInsert)["status"],
                 paidAt:
                   event.status === "approved"
-                    ? sql`coalesce(${orders.paidAt}, ${confirmedAt})`
+                    ? sql`coalesce(${orders.paidAt}, ${confirmedAt.toISOString()})`
                     : undefined,
                 refundedAt: event.status === "refunded" ? now : undefined,
                 chargebackAt: event.status === "chargeback" ? now : undefined,
@@ -407,7 +407,7 @@ export async function processBroskiEvent(
                   refused: "payment_failed",
                   expired: "payment_failed",
                 };
-              const linkEvent = LINK_EVENT_BY_STATUS[event.status!];
+                const linkEvent = LINK_EVENT_BY_STATUS[event.status!];
                 if (linkEvent) {
                   await db.insert(paymentLinkEvents).values({
                     workspaceId: orderRow.workspaceId,
@@ -438,7 +438,7 @@ export async function processBroskiEvent(
                       lastActivityAt: now,
                       firstPurchaseAt:
                         event.status === "approved"
-                          ? sql`coalesce(${customers.firstPurchaseAt}, ${now})`
+                          ? sql`coalesce(${customers.firstPurchaseAt}, ${now.toISOString()})`
                           : undefined,
                       lastPurchaseAt:
                         event.status === "approved" ? now : undefined,
@@ -485,7 +485,7 @@ export async function processBroskiEvent(
                 refunded: { type: "refund", direction: "out" },
                 chargeback: { type: "chargeback", direction: "out" },
               };
-            const ledgerPlan = LEDGER_ENTRY_BY_STATUS[event.status!];
+              const ledgerPlan = LEDGER_ENTRY_BY_STATUS[event.status!];
               if (ledgerPlan && statusTransitionApplied) {
                 await db.insert(ledgerEntries).values({
                   workspaceId: orderRow.workspaceId,
@@ -510,7 +510,7 @@ export async function processBroskiEvent(
                   refunded: "order.refunded",
                   chargeback: "order.chargeback",
                 };
-            const outboundEvent = OUTBOUND_EVENT_BY_STATUS[event.status!];
+              const outboundEvent = OUTBOUND_EVENT_BY_STATUS[event.status!];
               if (outboundEvent) {
                 await dispatchWebhookEvent(
                   orderRow.workspaceId,
@@ -614,7 +614,7 @@ export async function processBroskiEvent(
                 });
               }
 
-            const notice = NOTIFICATION_BY_STATUS[event.status!];
+              const notice = NOTIFICATION_BY_STATUS[event.status!];
               if (notice && statusTransitionApplied) {
                 const amount = (orderRow.totalCents / 100).toLocaleString(
                   "pt-PT",

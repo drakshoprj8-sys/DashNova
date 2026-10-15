@@ -28,6 +28,12 @@ describe("gateway payment reconciliation", () => {
     };
     expect(matchesGatewayPayment(expected, result)).toBe(true);
     expect(
+      matchesGatewayPayment(
+        { ...expected, orderReference: "VD-1042" },
+        { ...result, raw: { external_reference: "VD-1042" } },
+      ),
+    ).toBe(true);
+    expect(
       matchesGatewayPayment(expected, { ...result, amountCents: 699 }),
     ).toBe(false);
     expect(
