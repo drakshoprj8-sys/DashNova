@@ -139,7 +139,12 @@ export async function syncBroskiPayment(
   const result = await resolved.provider.getPayment(row.payment.externalId);
   if (
     !matchesGatewayPayment(
-      { ...row.payment, externalId: row.payment.externalId, orderId },
+      {
+        ...row.payment,
+        externalId: row.payment.externalId,
+        orderId,
+        orderReference: row.order.reference,
+      },
       result,
     ) ||
     result.amountCents !== row.order.totalCents ||
