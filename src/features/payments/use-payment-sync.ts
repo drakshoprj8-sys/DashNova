@@ -40,7 +40,7 @@ export function usePaymentSync(onUpdate?: () => void) {
             : null,
         });
         if (result.updated) onUpdateRef.current?.();
-      } catch (error) {
+      } catch {
         if (!controller.signal.aborted)
           setState((previous) => ({
             ...previous,
