@@ -58,9 +58,12 @@ import {
 import { isCanonicalOrderNotification } from "./notification-policy";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
+  ORDER_UPDATE_PREFERENCES,
+  RECOVERY_PREFERENCES,
   buildNotificationContent,
   type NotificationPreferences,
 } from "./notification-content";
+import { STATUS_LABEL } from "@/features/orders/status";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -82,6 +85,7 @@ const PREVIEW_VARS: CampaignTemplateVars = {
   produto: "Produto Exemplo",
   pedido: "PED-1234",
   valor: "49,90 €",
+  status: "Enviado",
   checkoutUrl: "https://loja.exemplo.pt/checkout/pedido",
   lojaUrl: "https://loja.exemplo.pt",
 };
@@ -94,6 +98,9 @@ function recipientPreviewVars(recipient: Recipient): CampaignTemplateVars {
     produto: recipient.productName ?? "o seu produto",
     pedido: recipient.orderReference ?? "o seu pedido",
     valor: money(recipient.orderTotalCents, recipient.currency),
+    status: recipient.orderStatus
+      ? (STATUS_LABEL[recipient.orderStatus] ?? "Enviado")
+      : "Enviado",
     checkoutUrl:
       recipient.checkoutUrl ?? "https://loja.exemplo.pt/checkout/pedido",
     lojaUrl: "https://loja.exemplo.pt",
@@ -189,15 +196,13 @@ export function CampaignForm({
     error: string;
   }>({ segment: null, loading: false, error: "" });
   const [notificationPreferences, setNotificationPreferences] =
-    React.useState<NotificationPreferences>({
-      ...(informational
-        ? STORE_NOTICE_PREFERENCES
-        : DEFAULT_NOTIFICATION_PREFERENCES),
-      ctaLabel:
-        initialSegment === "pending"
-          ? "Abrir checkout do pedido"
-          : DEFAULT_NOTIFICATION_PREFERENCES.ctaLabel,
-    });
+    React.useState<NotificationPreferences>(
+      informational
+        ? { ...STORE_NOTICE_PREFERENCES }
+        : initialSegment === "pending"
+          ? { ...RECOVERY_PREFERENCES }
+          : { ...ORDER_UPDATE_PREFERENCES },
+    );
   const notificationContent = linkedNotice
     ? buildStoreNoticeLinkContent(notificationPreferences, noticeLink)
     : informational
@@ -388,11 +393,13 @@ export function CampaignForm({
           : { ...STORE_NOTICE_PREFERENCES }
         : {
             ...(informational ? DEFAULT_NOTIFICATION_PREFERENCES : current),
-            ctaLabel: ["Ver pedido", "Abrir checkout do pedido"].includes(
-              current.ctaLabel,
-            )
+            ctaLabel: [
+              "Ver pedido",
+              "Abrir checkout do pedido",
+              "Retomar a minha compra",
+            ].includes(current.ctaLabel)
               ? nextCheckout
-                ? "Abrir checkout do pedido"
+                ? "Retomar a minha compra"
                 : "Ver pedido"
               : current.ctaLabel,
           },
@@ -405,11 +412,13 @@ export function CampaignForm({
     if (!checkout) setRequestedCheckoutUrl("");
     setNotificationPreferences((current) => ({
       ...current,
-      ctaLabel: ["Ver pedido", "Abrir checkout do pedido"].includes(
-        current.ctaLabel,
-      )
+      ctaLabel: [
+        "Ver pedido",
+        "Abrir checkout do pedido",
+        "Retomar a minha compra",
+      ].includes(current.ctaLabel)
         ? checkout
-          ? "Abrir checkout do pedido"
+          ? "Retomar a minha compra"
           : "Ver pedido"
         : current.ctaLabel,
     }));
@@ -1101,6 +1110,11 @@ export function CampaignForm({
                   }
                   requestedCheckoutUrl={requestedCheckoutUrl}
                   onRequestedCheckoutUrlChange={changeRequestedCheckoutUrl}
+                  restoreDefaults={
+                    isCheckoutCampaign
+                      ? RECOVERY_PREFERENCES
+                      : ORDER_UPDATE_PREFERENCES
+                  }
                 />
               )}
 

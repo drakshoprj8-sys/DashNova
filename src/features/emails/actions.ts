@@ -52,6 +52,7 @@ import { getSession } from "@/lib/auth/session";
 import { formatMoney } from "@/lib/format";
 import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 import { createTrackingUrl } from "@/features/orders/tracking-link";
+import { STATUS_LABEL } from "@/features/orders/status";
 import { verifiedCheckoutUrl } from "@/features/emails/verified-checkout";
 import { matchesOrderCheckout } from "@/features/emails/checkout-url-constraint";
 import {
@@ -294,6 +295,7 @@ async function resolveRecipients(
           orderTotalCents: order.totalCents,
           currency: order.currency,
           checkoutUrl,
+          orderStatus: "awaiting_payment",
         },
       ];
     });
@@ -306,6 +308,7 @@ async function resolveRecipients(
       productName: orderItems.productName,
       totalCents: orders.totalCents,
       currency: orders.currency,
+      status: orders.status,
     })
     .from(orders)
     .innerJoin(
@@ -368,6 +371,7 @@ async function resolveRecipients(
         orderTotalCents: order.totalCents,
         currency: order.currency,
         checkoutUrl: null,
+        orderStatus: order.status,
       },
     ];
   });
@@ -415,6 +419,9 @@ function templateVars(
         ? createTrackingUrl(recipient.orderId, recipient.id, appUrl)
         : ""),
     lojaUrl: appUrl,
+    status: recipient.orderStatus
+      ? STATUS_LABEL[recipient.orderStatus]
+      : undefined,
   };
 }
 

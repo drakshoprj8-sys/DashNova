@@ -45,8 +45,10 @@ export function StoreNoticeEditor({
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <Mail className="text-primary size-4" />
           {audience === "paid" || audience === "imported_paid"
-            ? "Comunicado para clientes pagantes"
-            : "Comunicado para todos os clientes"}
+            ? "Personalizar email para clientes pagos"
+            : audience === "imported_pending"
+              ? "Personalizar email para clientes pendentes"
+              : "Personalizar email para clientes"}
         </h3>
         <Button
           type="button"
@@ -59,6 +61,11 @@ export function StoreNoticeEditor({
         >
           <RotateCcw className="size-3.5" /> Restaurar padrão
         </Button>
+      </div>
+      <div className="rounded-lg border border-red-200/60 bg-red-50/50 p-3 text-xs text-red-900 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-200">
+        Modelo da referência: fundo cinza, mensagem em branco, bloco de produto
+        e botão vermelho. O assunto, o cabeçalho e a mensagem aparecem na prévia
+        enquanto você edita.
       </div>
       <p className="bg-muted/40 text-muted-foreground rounded-md border p-3 text-sm">
         {audience === "paid" || audience === "imported_paid"

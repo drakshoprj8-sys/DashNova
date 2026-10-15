@@ -23,6 +23,7 @@ export const EMAIL_VARIABLES = [
   { token: "{{PRODUTO}}", label: "Produto" },
   { token: "{{PEDIDO}}", label: "Numero do pedido" },
   { token: "{{VALOR}}", label: "Valor do pedido" },
+  { token: "{{STATUS}}", label: "Estado do pedido" },
   { token: "{{CHECKOUT_URL}}", label: "Link do pedido" },
   { token: "{{LOJA_URL}}", label: "Endereco da loja" },
 ] as const;
@@ -36,6 +37,8 @@ export interface CampaignTemplateVars {
   valor: string;
   checkoutUrl: string;
   lojaUrl: string;
+  /** Estado real do pedido verificado (rótulo pt), preenchido pelo servidor. */
+  status?: string;
 }
 
 export interface CampaignTemplateContent {
@@ -64,6 +67,10 @@ const VARIABLE_ALIASES: Record<string, keyof CampaignTemplateVars> = {
   pedido: "pedido",
   valor: "valor",
   checkout_url: "checkoutUrl",
+  STATUS: "status",
+  ESTADO: "status",
+  status: "status",
+  estado: "status",
 };
 
 const VARIABLE_PATTERN = /\{\{\s*([A-Za-z_]+)\s*\}\}/g;
@@ -74,7 +81,7 @@ export function renderCampaignText(
   return template
     .replace(VARIABLE_PATTERN, (match, token: string) => {
       const key = VARIABLE_ALIASES[token];
-      return key ? vars[key] : "";
+      return key ? (vars[key] ?? "") : "";
     })
     .replace(/[ \t]+([,.;:!?])/g, "$1")
     .replace(/[ \t]+\n/g, "\n")
@@ -164,30 +171,35 @@ export function buildCampaignHtml(input: {
   const hasOrder = Boolean(
     input.vars.pedido.trim() && input.vars.pedido !== "o seu pedido",
   );
+  const hasProduct = Boolean(
+    input.vars.produto.trim() && input.vars.produto !== "o seu produto",
+  );
+  const status = (input.vars.status ?? "").trim();
   const checkoutButton = hasCtaUrl
-    ? `<p style="margin:26px 0 18px;line-height:1.65">Use o botão abaixo para continuar:</p>
-<div style="margin:0 0 28px;text-align:center"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#cc0000;color:#ffffff;text-decoration:none;padding:15px 28px;border-radius:4px;font-weight:700">${escapeHtml(ctaLabel)}</a></div>
-<p style="margin:0 0 26px;line-height:1.55;color:#4b5563;font-size:12px">${escapeHtml(fallbackText)}<br><a href="${escapeHtml(ctaUrl)}" style="color:#cc0000;word-break:break-all">${escapeHtml(ctaUrl)}</a></p>`
+    ? `<p style="margin:28px 0 16px;line-height:1.65">Use o botão abaixo para continuar:</p>
+<div style="margin:0 0 20px;text-align:center"><a href="${escapeHtml(ctaUrl)}" style="display:inline-block;background:#cc0000;color:#ffffff;text-decoration:none;padding:15px 34px;border-radius:8px;font-weight:700;font-size:15px">${escapeHtml(ctaLabel)}</a></div>
+<p style="margin:0 0 26px;line-height:1.55;color:#6b7280;font-size:12px">${escapeHtml(fallbackText)}<br><a href="${escapeHtml(ctaUrl)}" style="color:#cc0000;word-break:break-all">${escapeHtml(ctaUrl)}</a></p>`
     : "";
-  return `<!doctype html><html lang="pt"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f3f4f6;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;color:#111827;font-size:14px">
+  return `<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f3f4f6;padding:28px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,Helvetica,sans-serif;color:#111827;font-size:15px;line-height:1.65">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(preheader)}${"&#8199;&#65279;&#847; ".repeat(24)}</div>
-<div style="max-width:600px;margin:0 auto;background:#ffffff;border-top:6px solid #cc0000">
-<div style="padding:34px 32px 30px">
-${headerName ? `<p style="margin:0 0 10px;font-size:18px;font-weight:700;line-height:1.3;color:#cc0000">${escapeHtml(headerName)}</p>` : ""}
-<p style="margin:0 0 24px;color:#4b5563;font-size:14px">${escapeHtml(title)}</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border-top:4px solid #cc0000;box-shadow:0 1px 4px rgba(17,24,39,.08)"><tr><td>
+<div style="padding:34px 34px 30px">
+${headerName ? `<p style="margin:0 0 6px;font-size:19px;font-weight:700;line-height:1.3;letter-spacing:-.01em;color:#cc0000">${escapeHtml(headerName)}</p>` : ""}
+<h1 style="margin:0 0 ${status ? "16px" : "22px"};font-size:22px;font-weight:700;line-height:1.3;color:#111827">${escapeHtml(title)}</h1>
+${status ? `<p style="margin:0 0 22px"><span style="display:inline-block;background:#fdecec;color:#cc0000;font-size:12px;font-weight:700;letter-spacing:.02em;padding:6px 13px;border-radius:999px">Estado: ${escapeHtml(status)}</span></p>` : ""}
 ${paragraphs}
 ${
-  hasOrder
-    ? `<div style="margin:22px 0 24px;background:#f7f7f7;padding:22px 24px;line-height:1.65">
-<strong>Encomenda:</strong> ${escapeHtml(input.vars.pedido)}${input.vars.produto.trim() && input.vars.produto !== "o seu produto" ? `<br><strong>Artigo:</strong> ${escapeHtml(articleName)}` : ""}
-</div>`
+  hasOrder || hasProduct
+    ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:10px 0 26px;background:#f7f8fa;border:1px solid #eceef1;border-radius:12px"><tr><td style="padding:20px 24px;font-size:14px;line-height:1.75;color:#111827">
+${hasOrder ? `<strong>Encomenda:</strong> ${escapeHtml(input.vars.pedido)}` : ""}${hasProduct ? `${hasOrder ? "<br>" : ""}<strong>Artigo:</strong> ${escapeHtml(articleName)}` : ""}
+</td></tr></table>`
     : ""
 }
 ${checkoutButton}
-<p style="margin:0;line-height:1.65">Se tiver dúvidas, contacte o apoio da PCCGVIP.</p>
+<p style="margin:0;line-height:1.65;color:#374151">Se tiver dúvidas, contacte o apoio da PCCGVIP.</p>
 </div>
-<div style="border-top:1px solid #e5e7eb;padding:20px 32px;text-align:left">
-<p style="margin:0;font-size:12px;line-height:1.6;color:#4b5563">Mensagem da PCCGVIP.<br>Para deixar de receber, contacte o apoio da nossa loja.</p>
+<div style="border-top:1px solid #e5e7eb;padding:20px 34px;text-align:left">
+<p style="margin:0;font-size:12px;line-height:1.6;color:#6b7280">Mensagem da PCCGVIP.<br>Para deixar de receber, contacte o apoio da nossa loja.</p>
 </div>
-</div></body></html>`;
+</td></tr></table></body></html>`;
 }

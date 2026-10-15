@@ -24,6 +24,7 @@ export function NotificationEditor({
   previewCheckoutUrl,
   requestedCheckoutUrl = "",
   onRequestedCheckoutUrlChange,
+  restoreDefaults = DEFAULT_NOTIFICATION_PREFERENCES,
 }: {
   value: NotificationPreferences;
   onChange: (value: NotificationPreferences) => void;
@@ -31,6 +32,7 @@ export function NotificationEditor({
   previewCheckoutUrl?: string | null;
   requestedCheckoutUrl?: string;
   onRequestedCheckoutUrlChange?: (value: string) => void;
+  restoreDefaults?: NotificationPreferences;
 }) {
   const content = {
     ...buildNotificationContent(value),
@@ -52,8 +54,8 @@ export function NotificationEditor({
           variant="ghost"
           size="sm"
           onClick={() => onChange({
-            ...DEFAULT_NOTIFICATION_PREFERENCES,
-            ctaLabel: destinationKind === "checkout" ? "Abrir checkout do pedido" : DEFAULT_NOTIFICATION_PREFERENCES.ctaLabel,
+            ...restoreDefaults,
+            ctaLabel: restoreDefaults.ctaLabel,
           })}
         >
           <RotateCcw className="size-3.5" /> Restaurar padrão
@@ -89,8 +91,8 @@ export function NotificationEditor({
           placeholder="Ex.: Equipa de apoio PCCGVIP"
         />
         <p className="text-muted-foreground text-xs">
-          Escolha o nome da equipa ou setor e mantenha PCCGVIP para identificar
-          a loja. Remetente: notificacoes@encomendapgcvip.site.
+          Escreva o nome da sua loja ou equipe. Ele aparece no topo do email;
+          o endereço do remetente continua sendo o configurado na loja.
         </p>
       </div>
       <div className="space-y-2">
@@ -230,6 +232,7 @@ export function NotificationEditor({
           "{{PEDIDO}}",
           "{{PRODUTO}}",
           "{{VALOR}}",
+          "{{STATUS}}",
           "{{CHECKOUT_URL}}",
           "{{LOJA_URL}}",
         ].map((token) => (

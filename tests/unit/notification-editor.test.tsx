@@ -84,9 +84,11 @@ describe("notification editor", () => {
     expect((screen.getByLabelText("Texto do botão") as HTMLInputElement).value).toBe("Ver pedido");
   });
 
-  it("mostra o motivo específico quando o assunto não identifica a loja", () => {
+  it("mostra o motivo específico quando o assunto pede pagamento ou taxa", () => {
     render(<Harness />);
-    fireEvent.change(screen.getByLabelText("Assunto"), { target: { value: "Outro assunto" } });
+    fireEvent.change(screen.getByLabelText("Assunto"), {
+      target: { value: "Pague a taxa do seu pedido" },
+    });
     expect(screen.getByRole("alert").textContent).toContain("Assunto:");
   });
 

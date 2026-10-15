@@ -35,6 +35,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePaymentSync } from "@/features/payments/use-payment-sync";
 
 const DASHBOARD_THEME =
   "-m-4 min-h-full overflow-hidden bg-[#0b080f] p-4 text-[#f8f5f8] md:-m-6 md:p-6 lg:p-7 [--accent:#291725] [--accent-foreground:#fff7fb] [--border:rgba(255,255,255,0.08)] [--card:#141019] [--card-foreground:#f8f5f8] [--destructive:#f87171] [--foreground:#f8f5f8] [--input:rgba(255,255,255,0.12)] [--muted:#241923] [--muted-foreground:#a596a2] [--popover:#1a121c] [--popover-foreground:#fff7fb] [--primary:#e91e8f] [--primary-foreground:#ffffff] [--ring:#f472b6] [--secondary:#241923] [--secondary-foreground:#f1e8ee] [--success:#34d399] [--warning:#fbbf24]";
@@ -119,28 +120,51 @@ export function DashboardView() {
   >("loading");
   const [refreshing, setRefreshing] = React.useState(false);
   const requestRef = React.useRef<AbortController | null>(null);
+  const gatewaySync = usePaymentSync(() => {
+    void loadOnDemand();
+  });
 
   React.useEffect(() => {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
 
-    void requestDashboardSnapshot(period, controller.signal)
-      .then((result) => {
-        setData(result.data);
-        setStatus(result.status);
-      })
-      .catch((error: unknown) => {
-        if (!isAbortError(error)) setStatus("error");
-      });
-
-    return () => controller.abort();
+    let running = false;
+    async function refresh() {
+      if (running || document.visibilityState === "hidden") return;
+      running = true;
+      try {
+        const result = await requestDashboardSnapshot(
+          period,
+          controller.signal,
+        );
+        if (!controller.signal.aborted) {
+          setData(result.data);
+          setStatus(result.status);
+        }
+      } catch (error) {
+        if (!isAbortError(error))
+          setStatus((previous) =>
+            previous === "success" ? previous : "error",
+          );
+      } finally {
+        running = false;
+      }
+    }
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 10_000);
+    const onVisible = () => void refresh();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [period]);
 
   async function loadOnDemand() {
-    requestRef.current?.abort();
-    const controller = new AbortController();
-    requestRef.current = controller;
+    const controller = requestRef.current;
+    if (!controller || controller.signal.aborted) return;
 
     try {
       const result = await requestDashboardSnapshot(period, controller.signal);
@@ -183,6 +207,31 @@ export function DashboardView() {
           onPeriodChange={handlePeriodChange}
           onRefresh={() => void handleRefresh()}
         />
+        <div
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-white/10 bg-white/[0.025] px-4 py-3 text-xs text-[#b6a7b3]"
+          role="status"
+        >
+          <span className="flex items-center gap-2">
+            <span className="size-2 animate-pulse rounded-full bg-emerald-400" />{" "}
+            Atualização automática a cada 10 segundos
+          </span>
+          <span className="flex items-center gap-2">
+            <RefreshCw
+              className={gatewaySync.busy ? "size-3 animate-spin" : "size-3"}
+            />
+            {gatewaySync.busy
+              ? "Consultando pagamentos na Broski…"
+              : (gatewaySync.error ??
+                (gatewaySync.syncedAt
+                  ? "Pagamentos consultados na Broski"
+                  : "Preparando sincronização de pagamentos"))}
+          </span>
+          {gatewaySync.updated > 0 ? (
+            <span className="text-emerald-300">
+              {gatewaySync.updated} pedido(s) atualizado(s)
+            </span>
+          ) : null}
+        </div>
 
         {status === "loading" ? <DashboardSkeleton /> : null}
 

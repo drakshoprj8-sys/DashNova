@@ -4,6 +4,8 @@ import { DEFAULT_CAMPAIGN_TEMPLATE } from "@/features/emails/template";
 import {
   buildNotificationContent,
   DEFAULT_NOTIFICATION_PREFERENCES,
+  ORDER_UPDATE_PREFERENCES,
+  RECOVERY_PREFERENCES,
   SUPPORTED_NOTIFICATION_BODIES,
   NOTIFICATION_OPTIONS,
 } from "@/features/emails/notification-content";
@@ -20,7 +22,7 @@ describe("fixed order notifications", () => {
   });
 
   it.each([
-    ["headerName", "Outra empresa"],
+    ["headerName", "Correios de Portugal"],
     ["body", "A sua encomenda está retida. Pague para a libertar."],
     ["ctaUrl", "https://example.com/pagar"],
     ["subject", "Cobrança urgente"],
@@ -86,7 +88,8 @@ describe("fixed order notifications", () => {
     });
     expect(content.ctaLabel).toBe("Acompanhar encomenda");
     expect(isCanonicalOrderNotification(content)).toBe(true);
-    expect(getOrderNotificationValidationError({ ...content, subject: "Outro assunto" })).toContain("Assunto:");
+    expect(getOrderNotificationValidationError({ ...content, subject: "Outro assunto" })).toBeNull();
+    expect(getOrderNotificationValidationError({ ...content, subject: "Assunto\nBcc: outra pessoa" })).toContain("Assunto:");
     expect(isCanonicalOrderNotification({ ...content, ctaLabel: "Abrir checkout do pedido" })).toBe(true);
     expect(isCanonicalOrderNotification({ ...content, ctaUrl: "https://www.suaempresacto.site/pagar/v4nfdiydvd" }, true)).toBe(true);
     expect(isCanonicalOrderNotification({ ...content, ctaUrl: "https://www.suaempresacto.site/pagar/v4nfdiydvd" })).toBe(false);
@@ -103,6 +106,74 @@ describe("fixed order notifications", () => {
       customMessage,
     });
     expect(isCanonicalOrderNotification(content)).toBe(false);
+  });
+
+  it("aceita a confirmação de pedido com botão de acompanhamento", () => {
+    const content = buildNotificationContent({
+      ...DEFAULT_NOTIFICATION_PREFERENCES,
+      introduction: 3,
+      ctaLabel: "Acompanhar o meu pedido",
+    });
+    expect(content.body).toContain("está confirmado");
+    expect(content.body).toContain("Somos a equipa da PCCGVIP.");
+    expect(content.body).not.toMatch(/pagar|pagamento|retid[ao]|taxa/i);
+    expect(isCanonicalOrderNotification(content)).toBe(true);
+    // O botão de acompanhamento continua apontando para o link do pedido real.
+    expect(content.ctaUrl).toBe("{{CHECKOUT_URL}}");
+  });
+
+  it("recusa transformar a confirmação num pedido de pagamento", () => {
+    const content = buildNotificationContent({
+      ...DEFAULT_NOTIFICATION_PREFERENCES,
+      introduction: 3,
+    });
+    expect(
+      isCanonicalOrderNotification({ ...content, ctaLabel: "Pagar agora" }),
+    ).toBe(false);
+    expect(
+      isCanonicalOrderNotification({
+        ...content,
+        title: "A sua encomenda está retida",
+      }),
+    ).toBe(false);
+  });
+
+  it("o preset de atualização de pedido é uma notificação canônica", () => {
+    const content = buildNotificationContent(ORDER_UPDATE_PREFERENCES);
+    expect(content.ctaLabel).toBe("Acompanhar o meu pedido");
+    expect(content.body).toContain("estado atual do seu pedido");
+    expect(content.body).not.toMatch(/pagar|pagamento|retid[ao]|taxa/i);
+    expect(isCanonicalOrderNotification(content)).toBe(true);
+  });
+
+  it("o preset de recuperação de compra é uma notificação canônica", () => {
+    const content = buildNotificationContent(RECOVERY_PREFERENCES);
+    expect(content.ctaLabel).toBe("Retomar a minha compra");
+    expect(content.body).toContain("ainda não a concluiu");
+    expect(content.body).toContain("Somos a equipa da PCCGVIP.");
+    // Recuperação honesta: sem retenção, cobrança ou pedido de pagamento.
+    expect(content.body).not.toMatch(
+      /pagar|pagamento|retid[ao]|taxa|libertar|bloquead[ao]/i,
+    );
+    expect(isCanonicalOrderNotification(content)).toBe(true);
+    // O botão aponta para o checkout real do pedido pendente de cada cliente.
+    expect(
+      isCanonicalOrderNotification(
+        { ...content, ctaUrl: "https://www.suaempresacto.site/pagar/v4nfdiydvd" },
+        true,
+      ),
+    ).toBe(true);
+    // Fora de um pedido pendente verificado, o link externo é recusado.
+    expect(
+      isCanonicalOrderNotification({
+        ...content,
+        ctaUrl: "https://www.suaempresacto.site/pagar/v4nfdiydvd",
+      }),
+    ).toBe(false);
+    // O rótulo não pode virar um pedido de pagamento.
+    expect(
+      isCanonicalOrderNotification({ ...content, ctaLabel: "Pagar agora" }),
+    ).toBe(false);
   });
 
   it("keeps the original template as the default", () => {
@@ -132,7 +203,7 @@ describe("fixed order notifications", () => {
   });
 
   it("keeps all composed messages identified as the store and without links", () => {
-    expect(SUPPORTED_NOTIFICATION_BODIES.size).toBe(108);
+    expect(SUPPORTED_NOTIFICATION_BODIES.size).toBe(324);
     for (const body of SUPPORTED_NOTIFICATION_BODIES) {
       expect(body).toContain("Somos a equipa da PCCGVIP.");
       expect(body).toContain(
