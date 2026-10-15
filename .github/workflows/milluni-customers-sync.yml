@@ -20,9 +20,14 @@ jobs:
         env:
           SYNC_URL: ${{ secrets.MILLUNI_SYNC_URL }}
           CRON_SECRET: ${{ secrets.MILLUNI_CRON_SECRET }}
+        # Sem os segredos a integração está desligada, não quebrada: falhar aqui
+        # pintava de vermelho o último commit da main a cada execução agendada.
+        # O aviso fica visível no resumo da execução (docs/MILLUNI.md).
         run: |
-          test -n "$SYNC_URL"
-          test -n "$CRON_SECRET"
+          if [ -z "$SYNC_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::warning title=Sincronização Milluni desligada::Defina os segredos MILLUNI_SYNC_URL e MILLUNI_CRON_SECRET no repositório para ativar (ver docs/MILLUNI.md)."
+            exit 0
+          fi
           curl --fail-with-body --silent --show-error \
             --retry 2 --retry-all-errors --max-time 90 \
             -H "Authorization: Bearer $CRON_SECRET" \

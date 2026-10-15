@@ -26,5 +26,9 @@ cada cinco minutos. Configure estes segredos no repositório:
   `https://www.painelinfinitydash.online/api/cron/milluni-customers`
 - `MILLUNI_CRON_SECRET`: o mesmo valor de `CRON_SECRET` configurado no Vercel
 
+Enquanto algum dos dois faltar, o workflow termina com sucesso e um aviso
+"Sincronização Milluni desligada" no resumo da execução, em vez de marcar o
+último commit da `main` como falho a cada cinco minutos.
+
 O endpoint aceita também `POST` de um utilizador autenticado no Infinity com
 permissão de importação, para execução manual e diagnóstico.
