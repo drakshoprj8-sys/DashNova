@@ -1,0 +1,7 @@
+.git/
+node_modules/
+.next/
+.env*
+outputs/
+debug.log
+.claude/settings.local.json
