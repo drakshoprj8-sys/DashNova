@@ -135,6 +135,12 @@ export function CheckoutThemeSheet({
           />
           <input type="hidden" name="headerTextColor" value={headerTextColor} />
           <input type="hidden" name="storeName" value={customStoreName} />
+          {state?.error && (
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertDescription>{state.error}</AlertDescription>
+            </Alert>
+          )}
           <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
             <Label htmlFor={`inherit-${checkoutId}`}>
               Usar identidade das Configurações
@@ -155,7 +161,7 @@ export function CheckoutThemeSheet({
             </p>
           ) : null}
           <div
-            className={inheritHeader ? "pointer-events-none opacity-50" : ""}
+            className={`space-y-4 ${inheritHeader ? "pointer-events-none opacity-50" : ""}`}
             inert={inheritHeader}
           >
             <Label htmlFor={`storeName-${checkoutId}`}>
@@ -169,12 +175,6 @@ export function CheckoutThemeSheet({
               maxLength={120}
             />
 
-            {state?.error && (
-              <Alert variant="destructive">
-                <AlertCircle />
-                <AlertDescription>{state.error}</AlertDescription>
-              </Alert>
-            )}
             {state?.ok && state.message && (
               <Alert variant="success">
                 <CheckCircle2 />

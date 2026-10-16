@@ -545,14 +545,14 @@ function ProductOfferBlock({ block }: { block: LandingBlock }) {
             <div className="mt-2 flex gap-2">
               <div className="flex h-11 w-[78px] items-center justify-center rounded-lg border border-slate-200 bg-white">
                 <Img
-                  src="/pagamentos/mbway.svg"
+                  src="/landing/mbway.svg"
                   alt="MB WAY"
                   className="h-7 w-14 object-contain"
                 />
               </div>
               <div className="flex h-11 w-14 items-center justify-center rounded-lg border border-slate-200 bg-white">
                 <Img
-                  src="/pagamentos/multibanco.svg"
+                  src="/landing/multibanco.svg"
                   alt="Multibanco"
                   className="size-8 object-contain"
                 />
@@ -1820,12 +1820,13 @@ function ReviewsBlock({ block }: { block: LandingBlock }) {
   const limit = propNumber(block.props, "limit", 10);
   const list = reviews.slice(0, Math.max(1, limit));
   const title = propText(block.props, "title", "Avaliações dos clientes");
+  const reviewBlock = { ...block, anchorId: block.anchorId || "avaliacoes" };
 
   if (list.length === 0) {
     const message = propText(block.props, "emptyMessage");
     if (!message) return null;
     return (
-      <Section block={block}>
+      <Section block={reviewBlock}>
         <Heading className="mb-4">{title}</Heading>
         <p
           className="p-8 text-center text-sm"
@@ -1844,7 +1845,7 @@ function ReviewsBlock({ block }: { block: LandingBlock }) {
   const average = list.reduce((sum, r) => sum + r.stars, 0) / list.length;
 
   return (
-    <Section block={block}>
+    <Section block={reviewBlock}>
       <Heading className="mb-4">{title}</Heading>
       <div
         className="flex flex-wrap items-center gap-3 p-4"

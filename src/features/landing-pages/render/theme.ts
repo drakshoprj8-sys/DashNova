@@ -134,7 +134,7 @@ export const LANDING_BASE_CSS = `
 .lp-product-gallery > section > div > div:last-child:not(:first-child) img { width: 56px; height: 56px; }
 .lp-gallery-discount { position: absolute; top: 10px; left: 10px; border-radius: 999px; background: #ed2028; padding: 4px 14px; color: #fff; font-size: 14px; font-weight: 800; pointer-events: none; }
 .lp-product-brand { color: var(--lp-primary); font-size: 14px; font-weight: 800; margin: 3px 0 10px; }
-.lp-product-title { font-size: 34px; line-height: 1.4; font-weight: 800; margin: 0; }
+.lp-product-title { max-width: 500px; font-size: 34px; line-height: 1.4; font-weight: 800; margin: 0; }
 .lp-product-rating { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 9px; font-size: 14px; color: #7b8795; }
 .lp-product-available { color: #16b96d; font-weight: 600; }
 .lp-product-price { margin-top: 23px; }
