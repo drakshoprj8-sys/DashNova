@@ -111,10 +111,12 @@ export function ProductPanel({
   page,
   products,
   appUrl,
+  builderState,
 }: {
   page: LandingPageDetail;
   products: ProductOption[];
   appUrl: string;
+  builderState: BuilderState;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<
@@ -123,7 +125,8 @@ export function ProductPanel({
   >(updateLandingSettingsAction, null);
   const [slug, setSlug] = React.useState(page.slug);
   const [sync, setSync] = React.useState(page.productSync);
-  const [logoUrl, setLogoUrl] = React.useState(page.logoUrl);
+  const logoUrl = builderState.doc.logoUrl ?? "";
+  const setLogoUrl = (logoUrl: string) => builderState.setIdentity({ logoUrl });
   const [faviconUrl, setFaviconUrl] = React.useState(page.faviconUrl);
   const isExternal = page.deployment.provider === "vercel";
   const publicUrl = resolveLandingPublicUrl({ ...page, slug }, appUrl);
@@ -169,7 +172,10 @@ export function ProductPanel({
               <Input
                 id="settings-public-name"
                 name="publicName"
-                defaultValue={page.publicName}
+                value={builderState.doc.publicName ?? page.publicName}
+                onChange={(event) =>
+                  builderState.setIdentity({ publicName: event.target.value })
+                }
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">

@@ -94,6 +94,7 @@ export function useBuilderState(pageId: string, initial: BuilderDoc) {
       setSaveState("error");
       setSaveError(result.error ?? "Não foi possível salvar.");
     }
+    return result;
   }, [pageId, doc]);
 
   // Autosave: dispara depois de o utilizador parar de mexer.

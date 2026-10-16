@@ -289,7 +289,7 @@ export function LandingBuilder({
           <Button
             size="sm"
             onClick={async () => {
-              if (!isExternal) await state.save();
+              if (!isExternal && !(await state.save()).ok) return;
               setTab("publicacao");
               router.refresh();
             }}
@@ -412,7 +412,13 @@ export function LandingBuilder({
               <DesignPanel state={state} branding={branding} />
             ) : null}
             {tab === "produto" ? (
-              <ProductPanel page={page} products={products} appUrl={appUrl} />
+              <ProductPanel
+                key={`${page.publicName}-${page.productSync}`}
+                page={page}
+                products={products}
+                appUrl={appUrl}
+                builderState={state}
+              />
             ) : null}
             {tab === "seo" ? (
               <SeoPanel state={state} publicUrl={publicUrl} />

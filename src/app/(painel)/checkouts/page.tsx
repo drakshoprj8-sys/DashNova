@@ -151,6 +151,7 @@ export default async function CheckoutsPage() {
                       <td className="py-3">
                         <div className="flex justify-end gap-1.5">
                           <CheckoutThemeSheet
+                            key={JSON.stringify(c.theme)}
                             checkoutId={c.id}
                             checkoutName={c.name}
                             theme={c.theme}
