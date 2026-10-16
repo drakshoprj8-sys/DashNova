@@ -191,6 +191,43 @@ function blockText(container: HTMLElement, type: string): string {
   );
 }
 
+describe("vitrine de produto", () => {
+  it("mantém foto, preço e checkout da opção escolhida e limita a quantidade ao estoque", () => {
+    const { container } = render(
+      <LandingRenderer
+        snapshot={snapshotWith([block("product_offer")])}
+        reviews={[]}
+        pageId="page-offer"
+      />,
+    );
+    for (let i = 0; i < 5; i++)
+      fireEvent.click(
+        screen.getByRole("button", { name: "Aumentar quantidade" }),
+      );
+    expect(
+      screen.getByRole("link", { name: "Comprar já" }).getAttribute("href"),
+    ).toContain("qty=6");
+    chooseColor("Rosa");
+    const href = screen
+      .getByRole("link", { name: "Comprar já" })
+      .getAttribute("href");
+    expect(href).toContain("variant=rosa");
+    expect(href).toContain("qty=2");
+    expect(container.querySelector(".lp-product-price")?.textContent).toContain(
+      "69,90",
+    );
+    expect(
+      container.querySelector(".lp-product-gallery img")?.getAttribute("src"),
+    ).toBe("https://cdn.example/rosa-1.jpg");
+    expect(
+      screen
+        .getByRole("button", { name: "Aumentar quantidade" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(screen.getByText("Ainda sem avaliações")).toBeTruthy();
+  });
+});
+
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",

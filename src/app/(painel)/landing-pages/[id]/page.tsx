@@ -14,6 +14,7 @@ import {
   listLandingVersions,
 } from "@/features/landing-pages/queries";
 import { LandingBuilder } from "@/features/landing-pages/builder/builder";
+import { getWorkspaceBranding } from "@/features/branding/queries";
 
 export const metadata: Metadata = { title: "Editor de landing page" };
 export const dynamic = "force-dynamic";
@@ -27,22 +28,30 @@ export default async function LandingPageEditor(
   const page = await getLandingPage(id);
   if (!page) notFound();
 
-  const [products, domains, versions, series, sources, reviews, session] =
-    await Promise.all([
-      listProductOptions(),
-      listDomains(),
-      listLandingVersions(page.id),
-      getLandingEventSeries(page.id),
-      getLandingSources(page.id),
-      page.product
-        ? getPublishedReviews(page.product.slug)
-        : Promise.resolve([]),
-      getSession(),
-    ]);
+  const [
+    products,
+    domains,
+    versions,
+    series,
+    sources,
+    reviews,
+    session,
+    branding,
+  ] = await Promise.all([
+    listProductOptions(),
+    listDomains(),
+    listLandingVersions(page.id),
+    getLandingEventSeries(page.id),
+    getLandingSources(page.id),
+    page.product ? getPublishedReviews(page.product.slug) : Promise.resolve([]),
+    getSession(),
+    getWorkspaceBranding(),
+  ]);
 
   return (
     <LandingBuilder
       page={page}
+      branding={branding}
       products={products}
       domains={domains}
       versions={versions}

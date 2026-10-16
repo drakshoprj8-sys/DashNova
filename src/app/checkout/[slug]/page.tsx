@@ -80,8 +80,19 @@ export default async function CheckoutSlugPage(
     ) ?? pickDefaultVariant(variants);
 
   const unitPriceCents = selectedVariant?.priceCents ?? product.priceCents;
-  const theme = checkout?.theme ?? DEFAULT_CHECKOUT_THEME;
-  const storeName = branding.storeName.trim() || "Minha Loja";
+  const originalTheme = checkout?.theme ?? DEFAULT_CHECKOUT_THEME;
+  const theme = originalTheme.useWorkspaceHeader
+    ? {
+        ...originalTheme,
+        bannerColor: branding.headerBackground ?? originalTheme.bannerColor,
+        headerTextColor: branding.headerTextColor ?? "#ffffff",
+        logoUrl: branding.logoUrl,
+      }
+    : originalTheme;
+  const storeName =
+    (!theme.useWorkspaceHeader && theme.storeName?.trim()) ||
+    branding.storeName.trim() ||
+    "Minha Loja";
   const logoUrl = theme.logoUrl ?? branding.logoUrl;
 
   const utm = {
@@ -127,7 +138,11 @@ export default async function CheckoutSlugPage(
             className="flex items-center justify-center"
             aria-label={storeName}
           >
-            <CheckoutBrand logoUrl={logoUrl} storeName={storeName} />
+            <CheckoutBrand
+              logoUrl={logoUrl}
+              storeName={storeName}
+              textColor={theme.headerTextColor}
+            />
           </Link>
         </div>
       </header>

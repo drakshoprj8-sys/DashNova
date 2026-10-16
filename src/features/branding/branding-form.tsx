@@ -28,6 +28,12 @@ export function BrandingForm({ initial }: { initial: WorkspaceBranding }) {
     FormData
   >(updateBrandingAction, null);
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl ?? "");
+  const [headerBackground, setHeaderBackground] = useState(
+    initial.headerBackground ?? "#e30613",
+  );
+  const [headerTextColor, setHeaderTextColor] = useState(
+    initial.headerTextColor ?? "#ffffff",
+  );
   const [storeName, setStoreName] = useState(
     initial.storeName.trim() || "Minha Loja",
   );
@@ -37,13 +43,19 @@ export function BrandingForm({ initial }: { initial: WorkspaceBranding }) {
       <CardHeader>
         <CardTitle className="text-base">Identidade da loja</CardTitle>
         <CardDescription>
-          Defina o nome e a logo próprios exibidos no cabeçalho e rodapé do
-          checkout. Você poderá trocar a imagem sempre que precisar.
+          Personalize o nome, a logo e as cores do cabeçalho. Landing pages e
+          checkouts podem usar esta identidade ou ter uma própria.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
           <input type="hidden" name="logoUrl" value={logoUrl} />
+          <input
+            type="hidden"
+            name="headerBackground"
+            value={headerBackground}
+          />
+          <input type="hidden" name="headerTextColor" value={headerTextColor} />
 
           {state?.error && (
             <Alert variant="destructive">
@@ -60,7 +72,7 @@ export function BrandingForm({ initial }: { initial: WorkspaceBranding }) {
 
           <LogoDropzone
             id="branding-logoUrl"
-            label="Logo padrão do checkout"
+            label="Logo da loja"
             value={logoUrl}
             onChange={setLogoUrl}
           />
@@ -75,14 +87,57 @@ export function BrandingForm({ initial }: { initial: WorkspaceBranding }) {
             </p>
             <div
               className="flex h-[65px] items-center justify-center rounded-lg px-4"
-              style={{ backgroundColor: "#e30613" }}
+              style={{ backgroundColor: headerBackground }}
             >
-              <CheckoutBrand logoUrl={logoUrl} storeName={storeName} />
+              <CheckoutBrand
+                logoUrl={logoUrl}
+                storeName={storeName}
+                textColor={headerTextColor}
+              />
             </div>
             <p className="text-muted-foreground text-[11px]">
               Área da logo: até 122 × 25 px, centralizada no celular e no
               computador.
             </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[
+              {
+                id: "header-background",
+                label: "Cor de fundo do cabeçalho",
+                value: headerBackground,
+                onChange: setHeaderBackground,
+              },
+              {
+                id: "header-text",
+                label: "Cor do nome no cabeçalho",
+                value: headerTextColor,
+                onChange: setHeaderTextColor,
+              },
+            ].map(({ id, label, value, onChange }) => (
+              <div className="space-y-2" key={id}>
+                <Label htmlFor={id}>{label}</Label>
+                <div className="flex gap-2">
+                  <input
+                    type="color"
+                    aria-label={`Escolher ${label}`}
+                    value={value}
+                    onChange={(event) => onChange(event.target.value)}
+                    className="size-9 shrink-0 rounded border"
+                  />
+                  <Input
+                    id={id}
+                    value={value}
+                    maxLength={7}
+                    pattern="#[0-9a-fA-F]{6}"
+                    onChange={(event) => onChange(event.target.value)}
+                    className="font-mono"
+                    required
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

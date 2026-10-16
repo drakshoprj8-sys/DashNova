@@ -246,7 +246,8 @@ export async function saveLandingDraftAction(
   if (!context)
     return { ok: false, error: "Sessão expirada. Entre novamente." };
 
-  const { id, content, theme, seo, tracking, customCode } = parsed.data;
+  const { id, content, theme, seo, tracking, customCode, publicName, logoUrl } =
+    parsed.data;
 
   try {
     const db = getDb();
@@ -255,6 +256,8 @@ export async function saveLandingDraftAction(
       .update(landingPages)
       .set({
         ...(content ? { content } : {}),
+        ...(publicName !== undefined ? { publicName } : {}),
+        ...(logoUrl !== undefined ? { logoUrl: logoUrl || null } : {}),
         ...(theme ? { theme } : {}),
         ...(seo ? { seo } : {}),
         ...(tracking ? { tracking } : {}),

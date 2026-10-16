@@ -24,6 +24,12 @@ export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
 const HEX_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/;
 
 export const updateCheckoutThemeSchema = z.object({
+  storeName: z.string().trim().max(120).optional(),
+  headerTextColor: z
+    .string()
+    .regex(/^#[0-9a-f]{6}$/i, "Cor do texto inválida")
+    .optional(),
+  useWorkspaceHeader: z.boolean().optional(),
   id: z.string().uuid("Checkout inválido"),
   primaryColor: z
     .string()

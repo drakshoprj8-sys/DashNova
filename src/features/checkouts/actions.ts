@@ -7,6 +7,7 @@ import { getDb, isDatabaseConfigured } from "@/database/client";
 import { checkouts, products } from "@/database/schema";
 import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 import { isCompanyComplete } from "@/lib/company";
+import { getSession } from "@/lib/auth/session";
 import { recordAuditLog } from "@/features/audit/log";
 import {
   createCheckoutSchema,
@@ -135,6 +136,9 @@ export async function updateCheckoutThemeAction(
   formData: FormData,
 ): Promise<CheckoutActionResult> {
   const parsed = updateCheckoutThemeSchema.safeParse({
+    storeName: formData.get("storeName") || "",
+    headerTextColor: formData.get("headerTextColor") || "#ffffff",
+    useWorkspaceHeader: formData.get("useWorkspaceHeader") === "true",
     id: formData.get("id"),
     primaryColor: formData.get("primaryColor"),
     buttonColor: formData.get("buttonColor"),
@@ -153,7 +157,18 @@ export async function updateCheckoutThemeAction(
   try {
     const db = getDb();
     const workspaceId = await getOrCreateDefaultWorkspace();
-    const { id, primaryColor, buttonColor, bannerColor, logoUrl } = parsed.data;
+    if (!(await getSession()))
+      return { ok: false, error: "Sessão expirada. Entre novamente." };
+    const {
+      id,
+      primaryColor,
+      buttonColor,
+      bannerColor,
+      logoUrl,
+      storeName,
+      headerTextColor,
+      useWorkspaceHeader,
+    } = parsed.data;
 
     const [current] = await db
       .select({ config: checkouts.config, slug: checkouts.slug })
@@ -176,6 +191,13 @@ export async function updateCheckoutThemeAction(
         config: {
           ...currentConfig,
           theme: {
+            ...(typeof currentConfig.theme === "object" &&
+            currentConfig.theme !== null
+              ? currentConfig.theme
+              : {}),
+            storeName,
+            headerTextColor,
+            useWorkspaceHeader,
             primaryColor,
             buttonColor,
             bannerColor,

@@ -36,6 +36,24 @@ function b(
  */
 export const LANDING_TEMPLATES: LandingTemplate[] = [
   {
+    id: "vitrine-produto",
+    name: "Vitrine de produto",
+    description:
+      "Galeria à esquerda e compra à direita, com opções e pagamentos visíveis.",
+    highlights: [
+      "Galeria e oferta",
+      "Opções compactas",
+      "Cabeçalho personalizável",
+    ],
+    build: () => [
+      b("product_offer"),
+      b("description"),
+      b("specs"),
+      b("reviews", {}, { paddingTop: 24, paddingBottom: 24 }),
+      b("faq"),
+    ],
+  },
+  {
     id: "produto-alta-conversao",
     name: "Produto físico de alta conversão",
     description:

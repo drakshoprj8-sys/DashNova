@@ -95,6 +95,32 @@ export const BLOCK_GROUP_LABELS: Record<BlockGroup, string> = {
  * `fields` e a chave correspondente em `defaults`.
  */
 export const BLOCK_CATALOG: Record<BlockType, BlockDef> = {
+  product_offer: {
+    type: "product_offer",
+    label: "Vitrine de produto",
+    description:
+      "Galeria ao lado do preço, opções, pagamentos e botão de compra.",
+    group: "produto",
+    icon: ShoppingCart,
+    requiresProduct: true,
+    singleton: true,
+    fields: [
+      { key: "eyebrow", label: "Marca do produto", type: "text" },
+      { key: "title", label: "Título (vazio usa o produto)", type: "text" },
+      { key: "ctaLabel", label: "Texto do botão", type: "text" },
+      { key: "shipping", label: "Informação de entrega", type: "text" },
+      { key: "returns", label: "Informação de devolução", type: "text" },
+      { key: "guarantee", label: "Informação de garantia", type: "text" },
+    ],
+    defaults: {
+      eyebrow: "",
+      title: "",
+      ctaLabel: "Comprar já",
+      shipping: "",
+      returns: "",
+      guarantee: "",
+    },
+  },
   announcement: {
     type: "announcement",
     label: "Barra de anúncio",

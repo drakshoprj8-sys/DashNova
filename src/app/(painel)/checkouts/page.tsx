@@ -156,6 +156,10 @@ export default async function CheckoutsPage() {
                             theme={c.theme}
                             storeName={branding.storeName}
                             inheritedLogoUrl={branding.logoUrl}
+                            inheritedHeaderBackground={
+                              branding.headerBackground
+                            }
+                            inheritedHeaderTextColor={branding.headerTextColor}
                           />
                           {c.productId && (
                             <Button size="sm" variant="ghost" asChild>

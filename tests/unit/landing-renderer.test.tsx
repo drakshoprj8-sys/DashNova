@@ -3,6 +3,11 @@ import { render, screen } from "@testing-library/react";
 
 import { LandingRenderer } from "@/features/landing-pages/render/landing-renderer";
 import { DEFAULT_THEME } from "@/features/landing-pages/defaults";
+import {
+  readHeaderSettings,
+  withWorkspaceHeader,
+} from "@/features/branding/header-theme";
+import { DEFAULT_BRANDING } from "@/features/branding/queries";
 import { createBlock } from "@/features/landing-pages/block-catalog";
 import type {
   BlockPropValue,
@@ -86,6 +91,38 @@ beforeEach(() => {
 });
 
 describe("LandingRenderer", () => {
+  it("renderiza as cores e a identidade escolhidas e permite herdar a configuração global", () => {
+    const snapshot = snapshotWith([block("product_offer")]);
+    const brand = {
+      ...DEFAULT_BRANDING,
+      storeName: "Loja Aurora",
+      headerBackground: "#123456",
+      headerTextColor: "#fedcba",
+    };
+    expect(withWorkspaceHeader(snapshot, brand)).toBe(snapshot);
+    snapshot.theme = { ...snapshot.theme, useWorkspaceHeader: true };
+    const inherited = withWorkspaceHeader(snapshot, brand);
+    const { container } = render(
+      <LandingRenderer
+        snapshot={inherited}
+        reviews={[]}
+        pageId="header-page"
+        mode="editor"
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Loja Aurora" })).toBeTruthy();
+    expect(
+      container.querySelector(".lp-root")?.getAttribute("style"),
+    ).toContain("--lp-header-bg: #123456");
+    expect(container.querySelector("header")?.getAttribute("style")).toContain(
+      "var(--lp-header-bg)",
+    );
+    expect(
+      readHeaderSettings({
+        storefrontHeader: { background: "bad", text: "#123456" },
+      }),
+    ).toEqual({ headerBackground: "#e30613", headerTextColor: "#123456" });
+  });
   it("usa a marca da própria landing page no cabeçalho e no rodapé", () => {
     render(
       <LandingRenderer

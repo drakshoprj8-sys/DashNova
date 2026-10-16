@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
   SheetClose,
@@ -70,18 +71,31 @@ export function CheckoutThemeSheet({
   theme,
   storeName,
   inheritedLogoUrl,
+  inheritedHeaderBackground = "#e30613",
+  inheritedHeaderTextColor = "#ffffff",
 }: {
   checkoutId: string;
   checkoutName: string;
   theme: CheckoutTheme;
   storeName: string;
   inheritedLogoUrl: string | null;
+  inheritedHeaderBackground?: string;
+  inheritedHeaderTextColor?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const [primaryColor, setPrimaryColor] = React.useState(theme.primaryColor);
   const [buttonColor, setButtonColor] = React.useState(theme.buttonColor);
   const [bannerColor, setBannerColor] = React.useState(theme.bannerColor);
   const [logoUrl, setLogoUrl] = React.useState(theme.logoUrl ?? "");
+  const [customStoreName, setCustomStoreName] = React.useState(
+    theme.storeName ?? "",
+  );
+  const [headerTextColor, setHeaderTextColor] = React.useState(
+    theme.headerTextColor ?? "#ffffff",
+  );
+  const [inheritHeader, setInheritHeader] = React.useState(
+    theme.useWorkspaceHeader ?? false,
+  );
   const [state, formAction, pending] = useActionState<
     CheckoutActionResult | null,
     FormData
@@ -114,38 +128,86 @@ export function CheckoutThemeSheet({
         >
           <input type="hidden" name="id" value={checkoutId} />
           <input type="hidden" name="logoUrl" value={logoUrl} />
-
-          {state?.error && (
-            <Alert variant="destructive">
-              <AlertCircle />
-              <AlertDescription>{state.error}</AlertDescription>
-            </Alert>
-          )}
-          {state?.ok && state.message && (
-            <Alert variant="success">
-              <CheckCircle2 />
-              <AlertDescription>{state.message}</AlertDescription>
-            </Alert>
-          )}
-
-          <LogoDropzone
-            id={`logoUrl-${checkoutId}`}
-            label="Logo do cabeçalho"
-            value={logoUrl}
-            onChange={setLogoUrl}
+          <input
+            type="hidden"
+            name="useWorkspaceHeader"
+            value={String(inheritHeader)}
           />
-          <p className="text-muted-foreground -mt-2 text-xs">
-            Aparece centralizada neste checkout. Sem uma logo própria, usa a
-            identidade geral definida no Editor de checkout.
-          </p>
+          <input type="hidden" name="headerTextColor" value={headerTextColor} />
+          <input type="hidden" name="storeName" value={customStoreName} />
+          <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+            <Label htmlFor={`inherit-${checkoutId}`}>
+              Usar identidade das Configurações
+            </Label>
+            <Switch
+              id={`inherit-${checkoutId}`}
+              checked={inheritHeader}
+              onCheckedChange={setInheritHeader}
+            />
+          </div>
+          {inheritHeader ? (
+            <p className="text-muted-foreground text-xs">
+              Nome, logo e cores acompanham as{" "}
+              <a className="underline" href="/configuracoes">
+                Configurações da loja
+              </a>
+              .
+            </p>
+          ) : null}
+          <div
+            className={inheritHeader ? "pointer-events-none opacity-50" : ""}
+            inert={inheritHeader}
+          >
+            <Label htmlFor={`storeName-${checkoutId}`}>
+              Nome da loja neste checkout
+            </Label>
+            <Input
+              id={`storeName-${checkoutId}`}
+              value={customStoreName}
+              onChange={(event) => setCustomStoreName(event.target.value)}
+              placeholder={storeName}
+              maxLength={120}
+            />
 
-          <ColorField
-            id={`bannerColor-${checkoutId}`}
-            name="bannerColor"
-            label="Cor de fundo do banner"
-            value={bannerColor}
-            onChange={setBannerColor}
-          />
+            {state?.error && (
+              <Alert variant="destructive">
+                <AlertCircle />
+                <AlertDescription>{state.error}</AlertDescription>
+              </Alert>
+            )}
+            {state?.ok && state.message && (
+              <Alert variant="success">
+                <CheckCircle2 />
+                <AlertDescription>{state.message}</AlertDescription>
+              </Alert>
+            )}
+
+            <LogoDropzone
+              id={`logoUrl-${checkoutId}`}
+              label="Logo do cabeçalho"
+              value={logoUrl}
+              onChange={setLogoUrl}
+            />
+            <p className="text-muted-foreground -mt-2 text-xs">
+              Aparece centralizada neste checkout. Sem uma logo própria, usa a
+              identidade geral definida no Editor de checkout.
+            </p>
+
+            <ColorField
+              id={`bannerColor-${checkoutId}`}
+              name="bannerColor"
+              label="Cor de fundo do banner"
+              value={bannerColor}
+              onChange={setBannerColor}
+            />
+            <ColorField
+              id={`headerTextColor-${checkoutId}`}
+              name="headerTextColorInput"
+              label="Cor do nome no cabeçalho"
+              value={headerTextColor}
+              onChange={setHeaderTextColor}
+            />
+          </div>
           <ColorField
             id={`primaryColor-${checkoutId}`}
             name="primaryColor"
@@ -166,11 +228,22 @@ export function CheckoutThemeSheet({
 
             <div
               className="flex h-[65px] items-center justify-center rounded-lg px-4"
-              style={{ backgroundColor: bannerColor }}
+              style={{
+                backgroundColor: inheritHeader
+                  ? inheritedHeaderBackground
+                  : bannerColor,
+              }}
             >
               <CheckoutBrand
-                logoUrl={logoUrl || inheritedLogoUrl}
-                storeName={storeName}
+                logoUrl={
+                  inheritHeader ? inheritedLogoUrl : logoUrl || inheritedLogoUrl
+                }
+                storeName={
+                  inheritHeader ? storeName : customStoreName || storeName
+                }
+                textColor={
+                  inheritHeader ? inheritedHeaderTextColor : headerTextColor
+                }
               />
             </div>
 

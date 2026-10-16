@@ -1,4 +1,6 @@
 import { cache } from "react";
+import { getWorkspaceBranding } from "@/features/branding/queries";
+import { withWorkspaceHeader } from "@/features/branding/header-theme";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { getDb, isDatabaseConfigured } from "@/database/client";
@@ -481,7 +483,10 @@ export const getPublishedLandingBySlug = cache(
         return null;
       }
 
-      const snapshot = row.publishedSnapshot as LandingSnapshot;
+      const published = row.publishedSnapshot as LandingSnapshot;
+      const snapshot = published.theme.useWorkspaceHeader
+        ? withWorkspaceHeader(published, await getWorkspaceBranding())
+        : published;
 
       // Com sincronização ligada, preço e estoque saem do catálogo na hora
       // da visita: uma alteração de preço não pode exigir republicação.
@@ -547,7 +552,14 @@ export const getLandingPreviewByToken = cache(
         publishedAt: new Date().toISOString(),
       };
 
-      return { id: row.id, slug: row.slug, snapshot, liveProduct: product };
+      return {
+        id: row.id,
+        slug: row.slug,
+        snapshot: snapshot.theme.useWorkspaceHeader
+          ? withWorkspaceHeader(snapshot, await getWorkspaceBranding())
+          : snapshot,
+        liveProduct: product,
+      };
     } catch (error) {
       console.error("[landing-pages] erro ao buscar preview:", error);
       return null;

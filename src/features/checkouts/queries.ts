@@ -7,6 +7,9 @@ import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 import { STANDARD_STOREFRONT } from "@/features/storefront/standard-brand";
 
 export interface CheckoutTheme {
+  storeName?: string;
+  headerTextColor?: string;
+  useWorkspaceHeader?: boolean;
   primaryColor: string;
   buttonColor: string;
   /** Cor de fundo do cabeçalho (banner) do checkout público. */
@@ -46,7 +49,19 @@ function parseCheckoutTheme(config: unknown): CheckoutTheme {
   const logoUrl =
     typeof t.logoUrl === "string" && t.logoUrl.trim() ? t.logoUrl : null;
 
-  return { primaryColor, buttonColor, bannerColor, logoUrl };
+  return {
+    primaryColor,
+    buttonColor,
+    bannerColor,
+    logoUrl,
+    storeName: typeof t.storeName === "string" ? t.storeName.trim() : "",
+    headerTextColor:
+      typeof t.headerTextColor === "string" &&
+      HEX_COLOR_REGEX.test(t.headerTextColor)
+        ? t.headerTextColor
+        : "#ffffff",
+    useWorkspaceHeader: t.useWorkspaceHeader === true,
+  };
 }
 
 export interface CheckoutRow {

@@ -10,6 +10,7 @@ import {
   Minus,
   MessageCircle,
   Plus,
+  RotateCcw,
   ShieldCheck,
   Star,
   Truck,
@@ -346,7 +347,11 @@ function StandardLandingHeader() {
   return (
     <header
       className="z-30 flex min-h-20 items-center justify-center px-4 py-5 md:min-h-24 md:py-6"
-      style={{ backgroundColor: STANDARD_STOREFRONT.headerBackground }}
+      style={{
+        backgroundColor: "var(--lp-header-bg)",
+        color: "var(--lp-header-text)",
+        minHeight: 72,
+      }}
     >
       <a
         href={product ? `/p/${product.slug}` : "#comprar"}
@@ -361,7 +366,7 @@ function StandardLandingHeader() {
             className="h-9 w-auto max-w-[220px] object-contain md:h-11"
           />
         ) : (
-          <span className="max-w-[280px] truncate text-2xl font-black tracking-tight text-white md:text-3xl">
+          <span className="max-w-[280px] truncate text-2xl font-black tracking-tight md:text-3xl">
             {publicName}
           </span>
         )}
@@ -426,6 +431,170 @@ function MenuBlock({ block }: { block: LandingBlock }) {
         ))}
       </div>
     </nav>
+  );
+}
+
+function ProductOfferBlock({ block }: { block: LandingBlock }) {
+  const {
+    product,
+    reviews,
+    canBuy,
+    currentPriceCents,
+    currentCompareAtCents,
+    money,
+  } = useRuntime();
+  if (!product) return null;
+  const price = buildPriceView(currentPriceCents, currentCompareAtCents);
+  const rating = reviews.length
+    ? reviews.reduce((sum, review) => sum + review.stars, 0) / reviews.length
+    : null;
+  const child = (
+    type: LandingBlock["type"],
+    props: LandingBlock["props"] = {},
+  ): LandingBlock => ({ id: `${block.id}-${type}`, type, props });
+
+  return (
+    <Section block={block} className="lp-product-offer">
+      <div className="lp-product-grid">
+        <div className="lp-product-gallery relative min-w-0">
+          <GalleryBlock block={child("gallery", { allowZoom: true })} />
+          {price.discountPercent ? (
+            <span className="lp-gallery-discount">
+              -{price.discountPercent}%
+            </span>
+          ) : null}
+        </div>
+        <div className="lp-product-details min-w-0">
+          {propText(block.props, "eyebrow") ? (
+            <p className="lp-product-brand">
+              {propText(block.props, "eyebrow")}
+            </p>
+          ) : null}
+          <h1 className="lp-product-title">
+            {propText(block.props, "title") || product.name}
+          </h1>
+          <div className="lp-product-rating">
+            {rating !== null ? (
+              <a
+                href="#avaliacoes"
+                className="inline-flex flex-wrap items-center gap-2"
+              >
+                <span
+                  className="text-amber-500"
+                  aria-label={`${rating.toFixed(1)} de 5 estrelas`}
+                >
+                  ★★★★★
+                </span>
+                <strong>{rating.toFixed(1)}</strong>
+                <span>
+                  · {reviews.length}{" "}
+                  {reviews.length === 1 ? "avaliação" : "avaliações"}
+                </span>
+              </a>
+            ) : (
+              <a href="#avaliacoes">Ainda sem avaliações</a>
+            )}
+            <span className={canBuy ? "lp-product-available" : "text-red-600"}>
+              · {canBuy ? "✓ Em stock" : "Indisponível"}
+            </span>
+          </div>
+          <div
+            className="lp-product-price"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <div className="flex flex-wrap items-baseline gap-3">
+              <strong className="text-[32px] leading-tight font-extrabold tracking-tight">
+                {money(price.priceCents)}
+              </strong>
+              {price.showCompareAt ? (
+                <del className="text-base text-slate-400">
+                  {money(price.compareAtPriceCents as number)}
+                </del>
+              ) : null}
+              {price.discountPercent ? (
+                <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-bold text-red-500">
+                  -{price.discountPercent}%
+                </span>
+              ) : null}
+            </div>
+            {price.savingsCents > 0 ? (
+              <p className="mt-3 text-sm font-semibold text-emerald-600">
+                Está a poupar {money(price.savingsCents)}!
+              </p>
+            ) : null}
+            <p className="mt-1 text-xs text-slate-400">
+              Preço com IVA incluído
+            </p>
+          </div>
+          <div className="lp-product-options">
+            <VariantsBlock
+              block={child("variants", {
+                label: "Opções",
+                style: "buttons",
+                showPrice: true,
+                showThumbnail: true,
+              })}
+            />
+          </div>
+          <div className="lp-product-payment">
+            <p className="flex items-center gap-1.5 text-sm font-semibold">
+              <ShieldCheck className="size-4 text-emerald-500" />
+              Pagamento seguro em Portugal
+            </p>
+            <div className="mt-2 flex gap-2">
+              <div className="flex h-11 w-[78px] items-center justify-center rounded-lg border border-slate-200 bg-white">
+                <Img
+                  src="/pagamentos/mbway.svg"
+                  alt="MB WAY"
+                  className="h-7 w-14 object-contain"
+                />
+              </div>
+              <div className="flex h-11 w-14 items-center justify-center rounded-lg border border-slate-200 bg-white">
+                <Img
+                  src="/pagamentos/multibanco.svg"
+                  alt="Multibanco"
+                  className="size-8 object-contain"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            className="lp-product-purchase"
+            id={block.anchorId ? undefined : "comprar"}
+          >
+            <div className="lp-product-quantity">
+              <QuantityBlock block={child("quantity")} />
+            </div>
+            <div className="lp-product-buy">
+              <BuyButtonBlock
+                block={child("buy_button", {
+                  label: propText(block.props, "ctaLabel", "Comprar já"),
+                  fullWidth: true,
+                  action: "checkout",
+                })}
+              />
+            </div>
+          </div>
+          <ul className="lp-product-promises">
+            {[
+              [Truck, propText(block.props, "shipping")],
+              [RotateCcw, propText(block.props, "returns")],
+              [ShieldCheck, propText(block.props, "guarantee")],
+            ].map(([Icon, text], index) =>
+              text ? (
+                <li key={index}>
+                  {React.createElement(Icon as typeof Truck, {
+                    className: "size-4 shrink-0 text-emerald-500",
+                  })}
+                  <span>{text as string}</span>
+                </li>
+              ) : null,
+            )}
+          </ul>
+        </div>
+      </div>
+    </Section>
   );
 }
 
@@ -1136,12 +1305,7 @@ function QuantityBlock({ block }: { block: LandingBlock }) {
   // servidor de qualquer forma — melhor nem deixar escolher.
   const limits = [configuredMax];
   if (variant?.purchaseLimit) limits.push(variant.purchaseLimit);
-  if (
-    variant &&
-    variant.trackInventory &&
-    !variant.allowBackorder &&
-    currentStock !== null
-  ) {
+  if (currentStock !== null && !variant?.allowBackorder) {
     limits.push(Math.max(min, currentStock));
   }
   const max = Math.max(min, Math.min(...limits));
@@ -1164,6 +1328,7 @@ function QuantityBlock({ block }: { block: LandingBlock }) {
         <button
           type="button"
           aria-label="Diminuir quantidade"
+          disabled={effective <= min}
           onClick={() => setQuantity(Math.max(min, effective - 1))}
           className="flex size-12 items-center justify-center"
         >
@@ -1175,6 +1340,7 @@ function QuantityBlock({ block }: { block: LandingBlock }) {
         <button
           type="button"
           aria-label="Aumentar quantidade"
+          disabled={effective >= max}
           onClick={() => setQuantity(Math.min(max, effective + 1))}
           className="flex size-12 items-center justify-center"
         >
@@ -2159,6 +2325,7 @@ const BLOCK_COMPONENTS: Record<
   logo: LogoBlock,
   menu: MenuBlock,
   hero: HeroBlock,
+  product_offer: ProductOfferBlock,
   gallery: GalleryBlock,
   video: VideoBlock,
   heading: HeadingBlock,
@@ -2232,7 +2399,7 @@ export function LandingRenderer({
   className,
 }: LandingRendererProps) {
   const product = snapshot.product;
-  const [quantity, setQuantity] = React.useState(1);
+  const [requestedQuantity, setQuantity] = React.useState(1);
   const [variantId, setVariantId] = React.useState<string | null>(
     () => pickInitialVariant(product, initialVariantPublicId)?.id ?? null,
   );
@@ -2250,6 +2417,23 @@ export function LandingRenderer({
     [product, variantId],
   );
 
+  const stockLimit = variant
+    ? variant.trackInventory && !variant.allowBackorder
+      ? variant.stockQuantity
+      : 10
+    : product?.trackInventory
+      ? product.stockQuantity
+      : 10;
+  const quantity = Math.max(
+    1,
+    Math.min(
+      requestedQuantity,
+      10,
+      variant?.purchaseLimit || 10,
+      Math.max(1, stockLimit),
+    ),
+  );
+
   const currentPriceCents = React.useMemo(() => {
     if (!product) return 0;
     return variant?.priceCents ?? product.priceCents;
@@ -2264,7 +2448,11 @@ export function LandingRenderer({
     // fica sem imagem por falta de upload numa cor.
     return variant && variant.gallery.length > 0
       ? variant.gallery
-      : product.gallery;
+      : product.gallery.length
+        ? product.gallery
+        : product.mainImageUrl
+          ? [product.mainImageUrl]
+          : [];
   }, [product, variant]);
 
   const currentStock = React.useMemo(() => {
@@ -2273,7 +2461,9 @@ export function LandingRenderer({
     return product.trackInventory ? product.stockQuantity : null;
   }, [product, variant]);
 
-  const canBuy = variant ? isPurchasable(variant) : true;
+  const canBuy = variant
+    ? isPurchasable(variant)
+    : !product?.trackInventory || product.stockQuantity > 0;
 
   // Primeira imagem da nova galeria carregada de imediato: sem isso o clique
   // na cor mostraria um quadro vazio até a rede responder.

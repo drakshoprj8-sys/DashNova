@@ -3,6 +3,9 @@
 import * as React from "react";
 import { AlertTriangle, Check, Copy, Info, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { LogoDropzone } from "@/components/logo-dropzone";
+import { CheckoutBrand } from "@/features/branding/checkout-brand";
+import type { WorkspaceBranding } from "@/features/branding/queries";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -80,11 +83,106 @@ function ThemeColor({
   );
 }
 
-export function DesignPanel({ state }: { state: BuilderState }) {
+export function DesignPanel({
+  state,
+  branding,
+}: {
+  state: BuilderState;
+  branding?: WorkspaceBranding;
+}) {
   const theme = state.doc.theme;
 
   return (
     <div className="mx-auto max-w-3xl">
+      <PanelSection
+        title="Cabeçalho da landing page"
+        description="Personalize a marca no topo. As alterações são salvas no rascunho; clique em Publicar para colocá-las no ar."
+      >
+        <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+          <div>
+            <Label htmlFor="inherit-store-header">
+              Usar identidade das Configurações
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              Nome, logo e cores acompanham a identidade geral da loja.
+            </p>
+          </div>
+          <Switch
+            id="inherit-store-header"
+            checked={theme.useWorkspaceHeader ?? false}
+            onCheckedChange={(checked) =>
+              state.setTheme({ useWorkspaceHeader: checked })
+            }
+          />
+        </div>
+        {!theme.useWorkspaceHeader ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="landing-store-name">
+                Nome da loja no cabeçalho
+              </Label>
+              <Input
+                id="landing-store-name"
+                value={state.doc.publicName ?? ""}
+                onChange={(event) =>
+                  state.setIdentity({ publicName: event.target.value })
+                }
+                maxLength={120}
+                placeholder="Nome da sua loja"
+              />
+            </div>
+            <LogoDropzone
+              id="landing-header-logo"
+              label="Logo do cabeçalho"
+              value={state.doc.logoUrl ?? ""}
+              onChange={(logoUrl) => state.setIdentity({ logoUrl })}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ThemeColor
+                label="Fundo do cabeçalho"
+                field="headerBackground"
+                state={state}
+              />
+              <ThemeColor
+                label="Texto do cabeçalho"
+                field="headerTextColor"
+                state={state}
+              />
+            </div>
+          </>
+        ) : (
+          <a className="text-primary text-sm underline" href="/configuracoes">
+            Editar identidade geral da loja
+          </a>
+        )}
+        <div
+          className="flex min-h-[72px] items-center justify-center rounded-xl px-5"
+          style={{
+            backgroundColor: theme.useWorkspaceHeader
+              ? branding?.headerBackground
+              : theme.headerBackground,
+          }}
+        >
+          <CheckoutBrand
+            storeName={
+              (theme.useWorkspaceHeader
+                ? branding?.storeName
+                : state.doc.publicName) || "Minha Loja"
+            }
+            logoUrl={
+              theme.useWorkspaceHeader ? branding?.logoUrl : state.doc.logoUrl
+            }
+            textColor={
+              theme.useWorkspaceHeader
+                ? branding?.headerTextColor
+                : theme.headerTextColor
+            }
+          />
+        </div>
+        <p className="text-muted-foreground text-xs">
+          Sem logo, o nome da loja aparece no cabeçalho.
+        </p>
+      </PanelSection>
       <PanelSection
         title="Cores"
         description="Aplicadas a toda a página. A prévia atualiza enquanto escolhe."

@@ -17,6 +17,8 @@ import type {
 } from "../types";
 
 export interface BuilderDoc {
+  publicName?: string;
+  logoUrl?: string;
   content: LandingContentDoc;
   theme: LandingTheme;
   seo: LandingSeo;
@@ -262,6 +264,68 @@ export function useBuilderState(pageId: string, initial: BuilderDoc) {
     [update],
   );
 
+  const setIdentity = React.useCallback(
+    (patch: { publicName?: string; logoUrl?: string }) =>
+      update((current) => ({ ...current, ...patch })),
+    [update],
+  );
+
+  const applyProductLayout = React.useCallback(
+    (eyebrow = "") => {
+      update((current) => {
+        const retained = [
+          "benefits",
+          "description",
+          "specs",
+          "shipping",
+          "guarantee",
+          "reviews",
+          "faq",
+        ]
+          .map((type) =>
+            current.content.blocks.find(
+              (block) => block.type === type && !block.hidden,
+            ),
+          )
+          .filter((block): block is LandingBlock => Boolean(block));
+        const offer = createBlock("product_offer");
+        offer.anchorId = "oferta";
+        offer.props = { ...offer.props, eyebrow };
+        // Preserve os textos de entrega e garantia já definidos pelo lojista.
+        const trust = current.content.blocks.find(
+          (block) => block.type === "trust_badges",
+        );
+        const items =
+          typeof trust?.props.items === "string"
+            ? trust.props.items
+                .split("\n")
+                .map((item) => item.split("|")[0].trim())
+            : [];
+        offer.props.shipping =
+          items.find((item) => /portes|entrega|envio/i.test(item)) ?? "";
+        offer.props.returns = items.find((item) => /devolu/i.test(item)) ?? "";
+        offer.props.guarantee =
+          items.find((item) => /garantia/i.test(item)) ?? "";
+        return {
+          ...current,
+          content: { blocks: [offer, ...retained] },
+          theme: {
+            ...current.theme,
+            primaryColor: "#ef0000",
+            buttonColor: "#ef0000",
+            buttonTextColor: "#ffffff",
+            backgroundColor: "#faf8f6",
+            textColor: "#292b2c",
+            variantSelectedColor: "#666666",
+            maxWidth: 1200,
+            radius: 16,
+          },
+        };
+      });
+    },
+    [update],
+  );
+
   const setSeo = React.useCallback(
     (patch: Partial<LandingSeo>) =>
       update((current) => ({ ...current, seo: { ...current.seo, ...patch } })),
@@ -311,6 +375,8 @@ export function useBuilderState(pageId: string, initial: BuilderDoc) {
     updateBlockStyle,
     updateBlockMeta,
     setTheme,
+    setIdentity,
+    applyProductLayout,
     setSeo,
     setTracking,
     setCustomCode,

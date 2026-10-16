@@ -10,16 +10,21 @@ export const CHECKOUT_BRAND_SIZE = {
 export function CheckoutBrand({
   logoUrl,
   storeName,
+  textColor = "#ffffff",
 }: {
   logoUrl: string | null | undefined;
   storeName: string;
+  textColor?: string;
 }) {
   const [failedUrl, setFailedUrl] = React.useState<string | null>(null);
   const resolvedName = storeName.trim() || "Minha Loja";
 
   if (!logoUrl || failedUrl === logoUrl) {
     return (
-      <span className="max-w-[122px] truncate text-[20px] leading-[25px] font-black tracking-[-0.045em] whitespace-nowrap text-white">
+      <span
+        style={{ color: textColor }}
+        className="max-w-[240px] truncate text-[20px] leading-[25px] font-black tracking-[-0.045em] whitespace-nowrap"
+      >
         {resolvedName}
       </span>
     );

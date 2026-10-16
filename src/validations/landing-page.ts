@@ -76,6 +76,7 @@ export const landingContentSchema = z.object({
 });
 
 export const landingThemeSchema = z.object({
+  useWorkspaceHeader: z.boolean().optional(),
   primaryColor: hexColor,
   secondaryColor: hexColor,
   backgroundColor: hexColor,
@@ -178,6 +179,8 @@ export const createLandingPageSchema = z.object({
 
 export const saveDraftSchema = z.object({
   id: z.string().uuid(),
+  publicName: z.string().trim().min(2, "Dê um nome à loja").max(120).optional(),
+  logoUrl: optionalUrl.optional(),
   content: landingContentSchema.optional(),
   theme: landingThemeSchema.optional(),
   seo: landingSeoSchema.optional(),

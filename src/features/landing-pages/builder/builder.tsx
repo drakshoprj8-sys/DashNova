@@ -45,6 +45,8 @@ import {
 import type { DomainRow } from "@/features/domains/queries";
 import type { ProductOption } from "@/features/products/queries";
 import type { PublicReview } from "@/features/reviews/queries";
+import type { WorkspaceBranding } from "@/features/branding/queries";
+import { withWorkspaceHeader } from "@/features/branding/header-theme";
 
 import type {
   LandingEventPoint,
@@ -82,6 +84,7 @@ const TABS = [
 
 const PRIMARY_TAB_IDS = new Set([
   "conteudo",
+  "design",
   "produto",
   "pixels",
   "dominio",
@@ -108,6 +111,7 @@ export interface BuilderProps {
   reviews: PublicReview[];
   appUrl: string;
   canEditCode: boolean;
+  branding?: WorkspaceBranding;
 }
 
 /**
@@ -127,6 +131,7 @@ export function LandingBuilder({
   reviews,
   appUrl,
   canEditCode,
+  branding,
 }: BuilderProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -151,6 +156,8 @@ export function LandingBuilder({
   const [viewport, setViewport] = React.useState<Viewport>("desktop");
 
   const state = useBuilderState(page.id, {
+    publicName: page.publicName || page.name,
+    logoUrl: page.logoUrl || "",
     content: page.content,
     theme: page.theme,
     seo: page.seo,
@@ -160,11 +167,11 @@ export function LandingBuilder({
 
   // Snapshot ao vivo: o mesmo formato que a página publicada recebe, montado
   // a partir do rascunho em edição.
-  const snapshot: LandingSnapshot = React.useMemo(
-    () => ({
+  const snapshot: LandingSnapshot = React.useMemo(() => {
+    const snapshot: LandingSnapshot = {
       version: page.draftVersion,
-      publicName: page.publicName || page.name,
-      logoUrl: page.logoUrl || null,
+      publicName: state.doc.publicName || page.publicName || page.name,
+      logoUrl: state.doc.logoUrl || null,
       faviconUrl: page.faviconUrl || null,
       language: page.language,
       currency: page.currency,
@@ -175,9 +182,9 @@ export function LandingBuilder({
       customCode: state.doc.customCode,
       product: page.product,
       publishedAt: new Date().toISOString(),
-    }),
-    [page, state.doc],
-  );
+    };
+    return branding ? withWorkspaceHeader(snapshot, branding) : snapshot;
+  }, [page, state.doc, branding]);
 
   const publicUrl = resolveLandingPublicUrl(page, appUrl);
 
@@ -355,6 +362,20 @@ export function LandingBuilder({
 
             <main className="min-w-0 flex-1 overflow-y-auto bg-muted/40">
               <div className="sticky top-0 z-10 flex items-center justify-center gap-1 border-b bg-background/90 px-3 py-2 backdrop-blur">
+                {page.product ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mr-3"
+                    onClick={() =>
+                      state.applyProductLayout(
+                        /alpha/i.test(page.product?.name ?? "") ? "ALPHA" : "",
+                      )
+                    }
+                  >
+                    Aplicar layout de produto
+                  </Button>
+                ) : null}
                 {VIEWPORTS.map((item) => (
                   <Button
                     key={item.id}
@@ -387,7 +408,9 @@ export function LandingBuilder({
           </div>
         ) : (
           <div className="h-full overflow-y-auto">
-            {tab === "design" ? <DesignPanel state={state} /> : null}
+            {tab === "design" ? (
+              <DesignPanel state={state} branding={branding} />
+            ) : null}
             {tab === "produto" ? (
               <ProductPanel page={page} products={products} appUrl={appUrl} />
             ) : null}

@@ -27,9 +27,13 @@ export function validateForPublish(page: {
     });
   }
 
-  const hasBuyButton = visible.some((block) => block.type === "buy_button");
+  const hasBuyButton = visible.some((block) =>
+    ["buy_button", "product_offer"].includes(block.type),
+  );
   const hasProductBlock = visible.some((block) =>
-    ["price", "gallery", "variants", "description"].includes(block.type),
+    ["price", "gallery", "variants", "description", "product_offer"].includes(
+      block.type,
+    ),
   );
 
   if (page.productId && !hasBuyButton) {

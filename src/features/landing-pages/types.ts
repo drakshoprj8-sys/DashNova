@@ -14,6 +14,7 @@ export const BLOCK_TYPES = [
   "logo",
   "menu",
   "hero",
+  "product_offer",
   "gallery",
   "video",
   "heading",
@@ -84,6 +85,7 @@ export interface LandingContentDoc {
 }
 
 export interface LandingTheme {
+  useWorkspaceHeader?: boolean;
   primaryColor: string;
   secondaryColor: string;
   backgroundColor: string;
