@@ -48,6 +48,20 @@ describe("comunicado informativo para todos", () => {
     expect(error).not.toContain("Correios");
   });
 
+  it.each([
+    "subject",
+    "preheader",
+    "headerName",
+    "title",
+    "customMessage",
+  ] as const)("rejeita a identidade da Worten no campo %s", (field) => {
+    const content = buildStoreNoticeContent({
+      ...STORE_NOTICE_PREFERENCES,
+      [field]: "Suporte Worten",
+    });
+    expect(getStoreNoticeValidationError(content)).not.toBeNull();
+  });
+
   it("limpa o erro do campo quando o cabeçalho usa o nome da loja", () => {
     function Harness() {
       const [value, setValue] = React.useState({

@@ -1,12 +1,6 @@
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { CampaignForm } from "@/features/emails/campaign-form";
 import { STORE_NOTICE_PREFERENCES } from "@/features/emails/store-notice";
 import {
@@ -58,76 +52,44 @@ beforeEach(() => {
   );
 });
 
-describe("checkout abaixo do comunicado", () => {
+describe("comunicados sem links arbitrários", () => {
   it.each(["all", "paid"] as const)(
-    "mantém o público %s e a mensagem ao preencher o checkout",
+    "mantém o público %s e prepara apenas o comunicado informativo",
     async (initialSegment) => {
-      render(
-        <CampaignForm
-          counts={{ all: 2, paid: 1, pending: 3 }}
-          resendReady
-          pendingRecipients={[]}
-          initialSegment={initialSegment}
-          consolidatedCustomerCount={2}
-          consolidatedPaidCustomerCount={1}
-          initialDispatchId="00000000-0000-4000-8000-000000000001"
-        />,
-      );
+      await act(async () => {
+        render(
+          <CampaignForm
+            counts={{ all: 2, paid: 1, pending: 3 }}
+            resendReady
+            pendingRecipients={[]}
+            initialSegment={initialSegment}
+            consolidatedCustomerCount={2}
+            consolidatedPaidCustomerCount={1}
+            initialDispatchId="00000000-0000-4000-8000-000000000001"
+          />,
+        );
+      });
       const message = screen.getByLabelText("Mensagem do comunicado");
-      const link = screen.getByLabelText("Link do botão");
-      expect(
-        message.compareDocumentPosition(link) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-      const form = link.closest("form")!;
+      const form = message.closest("form")!;
       fireEvent.change(message, {
         target: { value: "Confira as novidades da nossa loja." },
       });
-      const chosenUrl =
-        "https://externo.example/novidades?origem=email&campanha=outubro";
-      fireEvent.change(screen.getByLabelText("Texto do botão"), {
-        target: { value: "Continuar para o Pagamento" },
-      });
-      fireEvent.change(link, { target: { value: chosenUrl } });
+      expect(screen.queryByLabelText("Link do botão")).toBeNull();
+      expect(screen.queryByLabelText("Texto do botão")).toBeNull();
+      expect(screen.queryByLabelText("Texto do link alternativo")).toBeNull();
       const fields = () => new FormData(form);
       expect(fields().get("segment")).toBe(initialSegment);
       expect(fields().get("checkoutMode")).toBe("order");
-      expect(
-        (
-          screen.getByRole("button", {
-            name: /Enviar para/,
-          }) as HTMLButtonElement
-        ).disabled,
-      ).toBe(false);
-      await waitFor(() => expect(fields().get("ctaUrl")).toBe(chosenUrl));
-      expect(fields().get("campaignKind")).toBe("notice-link");
-      expect(fields().get("ctaLabel")).toBe("Continuar para o Pagamento");
+      expect(fields().get("ctaUrl")).toBe("");
+      expect(fields().get("campaignKind")).toBe("notice");
       expect(fields().getAll("body")).toHaveLength(1);
       expect(fields().get("body")).toContain("Confira as novidades");
-      expect(fields().get("body")).toContain("Este link é opcional");
+      expect(fields().get("body")).not.toContain("Este link é opcional");
       const preview = screen.getByTitle(
         "Preview do e-mail",
       ) as HTMLIFrameElement;
-      expect(preview.srcdoc).toContain(
-        `href="${chosenUrl.replace(/&/g, "&amp;")}"`,
-      );
-      expect(preview.srcdoc).toContain("background:#cc0000");
-      expect(preview.srcdoc).toContain("Continuar para o Pagamento");
+      expect(preview.srcdoc).not.toContain("href=");
       expect(preview.srcdoc).not.toContain("PED-1234");
-      expect(
-        (
-          screen.getByRole("button", {
-            name: /Enviar para/,
-          }) as HTMLButtonElement
-        ).disabled,
-      ).toBe(false);
-      // Removing the URL also removes the offer and keeps the notice sendable.
-      fireEvent.change(link, { target: { value: "" } });
-      expect(fields().get("campaignKind")).toBe("notice");
-      expect(fields().get("ctaUrl")).toBe("");
-      expect(
-        (screen.getByTitle("Preview do e-mail") as HTMLIFrameElement).srcdoc,
-      ).not.toContain("href=");
       expect(mocks.send).not.toHaveBeenCalled();
     },
   );

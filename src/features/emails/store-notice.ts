@@ -80,6 +80,9 @@ export function getStoreNoticeValidationError(
     ["Mensagem", note],
   ] as const) {
     const text = typeof value === "string" ? value : "";
+    if (/\bworten\b/i.test(text)) {
+      return `${label}: identifique a própria loja, sem apresentar o comunicado como uma mensagem da Worten.`;
+    }
     if (/\b(?:correios|ctt)\b/i.test(text)) {
       return `${label}: use o nome da sua loja ou equipe. Correios e CTT não podem identificar o remetente deste comunicado.`;
     }

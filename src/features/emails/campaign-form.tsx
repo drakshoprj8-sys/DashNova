@@ -43,12 +43,6 @@ import { NotificationEditor } from "./notification-editor";
 import { AudienceSelector } from "./audience-selector";
 import { StoreNoticeEditor } from "./store-notice-editor";
 import {
-  buildStoreNoticeLinkContent,
-  buildStoreNoticeLinkHtml,
-  getStoreNoticeLinkValidationError,
-  NOTICE_LINK_DEFAULTS,
-} from "./store-notice-link";
-import {
   STORE_NOTICE_PREFERENCES,
   buildStoreNoticeContent,
   buildStoreNoticeHtml,
@@ -168,10 +162,6 @@ export function CampaignForm({
     segment === "pending" || (segment === "custom" && customCheckoutMode);
   const informational =
     isStoreNoticeSegment(segment) || (segment === "custom" && customNoticeMode);
-  const [noticeLink, setNoticeLink] = React.useState({
-    ...NOTICE_LINK_DEFAULTS,
-  });
-  const linkedNotice = informational && Boolean(noticeLink.url.trim());
   const [requestedCheckoutUrl, setRequestedCheckoutUrl] = React.useState("");
   const [submittingMode, setSubmittingMode] = React.useState<"test" | "send">(
     "test",
@@ -203,17 +193,15 @@ export function CampaignForm({
           ? { ...RECOVERY_PREFERENCES }
           : { ...ORDER_UPDATE_PREFERENCES },
     );
-  const notificationContent = linkedNotice
-    ? buildStoreNoticeLinkContent(notificationPreferences, noticeLink)
-    : informational
-      ? buildStoreNoticeContent(notificationPreferences)
-      : {
-          ...buildNotificationContent(notificationPreferences),
-          ctaUrl:
-            isCheckoutCampaign && requestedCheckoutUrl.trim()
-              ? requestedCheckoutUrl.trim()
-              : "{{CHECKOUT_URL}}",
-        };
+  const notificationContent = informational
+    ? buildStoreNoticeContent(notificationPreferences)
+    : {
+        ...buildNotificationContent(notificationPreferences),
+        ctaUrl:
+          isCheckoutCampaign && requestedCheckoutUrl.trim()
+            ? requestedCheckoutUrl.trim()
+            : "{{CHECKOUT_URL}}",
+      };
   const {
     subject,
     preheader,
@@ -224,11 +212,9 @@ export function CampaignForm({
     ctaLabel,
     fallbackText,
   } = notificationContent;
-  const notificationReady = linkedNotice
-    ? getStoreNoticeLinkValidationError(notificationContent) === null
-    : informational
-      ? getStoreNoticeValidationError(notificationContent) === null
-      : isCanonicalOrderNotification(notificationContent, isCheckoutCampaign);
+  const notificationReady = informational
+    ? getStoreNoticeValidationError(notificationContent) === null
+    : isCanonicalOrderNotification(notificationContent, isCheckoutCampaign);
   const [previewRecipientId, setPreviewRecipientId] = React.useState(
     pendingRecipients[0]?.id ?? "",
   );
@@ -367,13 +353,13 @@ export function CampaignForm({
     title,
     articleName,
     ctaLabel,
-    ctaUrl: linkedNotice ? notificationContent.ctaUrl : "{{CHECKOUT_URL}}",
+    ctaUrl: "{{CHECKOUT_URL}}",
     fallbackText,
     vars: previewVars,
   };
-  const previewHtml = linkedNotice
-    ? buildStoreNoticeLinkHtml(previewInput)
-    : (informational ? buildStoreNoticeHtml : buildCampaignHtml)(previewInput);
+  const previewHtml = (
+    informational ? buildStoreNoticeHtml : buildCampaignHtml
+  )(previewInput);
 
   function chooseSegment(next: SegmentKey) {
     const nextCheckout =
@@ -473,11 +459,7 @@ export function CampaignForm({
           <form action={formAction} className="space-y-5">
             <input type="hidden" name="dispatchId" value={dispatchId} />
             <input type="hidden" name="segment" value={segment} />
-            <input
-              type="hidden"
-              name="campaignKind"
-              value={linkedNotice ? "notice-link" : "notice"}
-            />
+            <input type="hidden" name="campaignKind" value="notice" />
             <input
               type="hidden"
               name="checkoutMode"
@@ -1095,8 +1077,6 @@ export function CampaignForm({
                   hideSubject
                   value={notificationPreferences}
                   onChange={setNotificationPreferences}
-                  link={noticeLink}
-                  onLinkChange={setNoticeLink}
                 />
               ) : (
                 <NotificationEditor

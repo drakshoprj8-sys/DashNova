@@ -7,12 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { NotificationPreferences } from "./notification-content";
 import {
-  buildStoreNoticeLinkContent,
-  getStoreNoticeLinkValidationError,
-  NOTICE_LINK_DEFAULTS,
-  type NoticeLink,
-} from "./store-notice-link";
-import {
   STORE_NOTICE_PREFERENCES,
   buildStoreNoticeContent,
   getStoreNoticeValidationError,
@@ -22,23 +16,15 @@ export function StoreNoticeEditor({
   value,
   onChange,
   audience = "all",
-  link,
-  onLinkChange,
   hideSubject = false,
 }: {
   value: NotificationPreferences;
   onChange: (value: NotificationPreferences) => void;
   audience?: "all" | "paid" | "imported_paid" | "imported_pending" | "custom";
   hideSubject?: boolean;
-  link?: NoticeLink;
-  onLinkChange?: (link: NoticeLink) => void;
 }) {
-  const content = link?.url.trim()
-    ? buildStoreNoticeLinkContent(value, link)
-    : buildStoreNoticeContent(value);
-  const error = link?.url.trim()
-    ? getStoreNoticeLinkValidationError(content)
-    : getStoreNoticeValidationError(content);
+  const content = buildStoreNoticeContent(value);
+  const error = getStoreNoticeValidationError(content);
   return (
     <div className="min-w-0 space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -56,23 +42,21 @@ export function StoreNoticeEditor({
           size="sm"
           onClick={() => {
             onChange({ ...STORE_NOTICE_PREFERENCES });
-            onLinkChange?.({ ...NOTICE_LINK_DEFAULTS });
           }}
         >
           <RotateCcw className="size-3.5" /> Restaurar padrão
         </Button>
       </div>
       <div className="rounded-lg border border-red-200/60 bg-red-50/50 p-3 text-xs text-red-900 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-200">
-        Modelo da referência: fundo cinza, mensagem em branco, bloco de produto
-        e botão vermelho. O assunto, o cabeçalho e a mensagem aparecem na prévia
-        enquanto você edita.
+        O assunto, o cabeçalho e a mensagem aparecem na prévia enquanto você
+        edita. Este comunicado apresenta informações da própria loja.
       </div>
       <p className="bg-muted/40 text-muted-foreground rounded-md border p-3 text-sm">
         {audience === "paid" || audience === "imported_paid"
           ? "Envie informações da PCCGVIP aos clientes classificados como pagos na aba Clientes, incluindo os importados."
           : "Envie informações da PCCGVIP aos contatos elegíveis da aba Clientes, incluindo quem não tem pedido."}{" "}
-        Você pode incluir um botão com o link de sua escolha, mantendo o público
-        escolhido. Bloqueados e descadastrados ficam excluídos.
+        O comunicado é enviado sem botão ou link de pagamento. Bloqueados e
+        descadastrados ficam excluídos.
       </p>
       {(
         [
@@ -132,55 +116,6 @@ export function StoreNoticeEditor({
           apoio na prévia.
         </p>
       </div>
-      {link && onLinkChange && (
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="noticeCtaLabel">Texto do botão</Label>
-              <Input
-                id="noticeCtaLabel"
-                value={link.label}
-                maxLength={60}
-                onChange={(event) =>
-                  onLinkChange({ ...link, label: event.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="noticeCtaUrl">Link do botão</Label>
-              <Input
-                id="noticeCtaUrl"
-                type="url"
-                value={link.url}
-                maxLength={2048}
-                placeholder="https://exemplo.com/sua-pagina"
-                aria-describedby="noticeLinkHelp"
-                onChange={(event) =>
-                  onLinkChange({ ...link, url: event.target.value })
-                }
-              />
-            </div>
-          </div>
-          <p id="noticeLinkHelp" className="text-muted-foreground text-xs">
-            Cole uma URL completa. O botão vermelho aparece no e-mail e usa esse
-            mesmo link para todos os destinatários. Deixe vazio para enviar sem
-            botão.
-          </p>
-          <div className="space-y-2">
-            <Label htmlFor="noticeFallbackText">
-              Texto do link alternativo
-            </Label>
-            <Input
-              id="noticeFallbackText"
-              value={link.fallbackText}
-              maxLength={240}
-              onChange={(event) =>
-                onLinkChange({ ...link, fallbackText: event.target.value })
-              }
-            />
-          </div>
-        </div>
-      )}
       <div
         className="flex flex-wrap gap-1.5"
         aria-label="Variáveis do comunicado"

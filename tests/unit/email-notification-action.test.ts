@@ -7,7 +7,6 @@ import {
 } from "@/features/emails/store-notice";
 import { buildStoreOfferContent } from "@/features/emails/store-offer";
 import {
-  STORE_NOTICE_LINK_KIND,
   NOTICE_LINK_DEFAULTS,
   buildStoreNoticeLinkContent,
 } from "@/features/emails/store-notice-link";
@@ -113,14 +112,12 @@ describe("notification server boundary", () => {
     checkoutUrl: "https://example.com/checkout/produto",
   };
   it("envia um comunicado personalizado para clientes importados selecionados sem exigir pedido novo", async () => {
-    const values = vi
-      .fn()
-      .mockReturnValue({
-        onConflictDoNothing: () => ({
-          returning: async () => [{ id: "campaign" }],
-        }),
-        onConflictDoUpdate: async () => undefined,
-      });
+    const values = vi.fn().mockReturnValue({
+      onConflictDoNothing: () => ({
+        returning: async () => [{ id: "campaign" }],
+      }),
+      onConflictDoUpdate: async () => undefined,
+    });
     const db = {
       insert: vi.fn().mockReturnValue({ values }),
       update: vi
@@ -166,73 +163,35 @@ describe("notification server boundary", () => {
     );
   });
   it.each(["all", "paid", "imported_paid", "imported_pending"])(
-    "usa a URL escolhida no teste e no lote do público %s",
+    "recusa links arbitrários antes do teste e do lote no público %s",
     async (segment) => {
-      const values = vi.fn().mockReturnValue({
-        onConflictDoNothing: () => ({
-          returning: async () => [{ id: "campaign" }],
-        }),
-        onConflictDoUpdate: async () => undefined,
-      });
-      const db = {
-        insert: vi.fn().mockReturnValue({ values }),
-        update: vi
-          .fn()
-          .mockReturnValue({ set: () => ({ where: async () => undefined }) }),
-        selectDistinct: vi.fn(),
-      };
-      mocks.getDb.mockReturnValue(db);
-      mocks.getSegmentRecipients.mockResolvedValue([
-        { id: "a", name: "Ana", email: "ana@example.com", orderId: null },
-      ]);
-      mocks.sendEmailBatch.mockResolvedValue({ ok: true, externalIds: ["a"] });
-      mocks.sendEmail.mockResolvedValue({ ok: true, externalId: "test" });
-      const url =
-        "https://externo.example/redirecionar?origem=email&cliente=1#novidades";
-      const content = buildStoreNoticeLinkContent(
-        { ...STORE_NOTICE_PREFERENCES, customMessage: "Confira as novidades." },
-        {
+      for (const url of [
+        "https://externo.example/redirecionar?origem=email#novidades",
+        "https://www.encomendasualink.site/pagar/pedidopt",
+      ]) {
+        const content = buildStoreNoticeLinkContent(STORE_NOTICE_PREFERENCES, {
           ...NOTICE_LINK_DEFAULTS,
           url,
-          label: "Abrir página",
-          fallbackText: "Copie este endereço se preferir.",
-        },
-      );
-      const send = await sendCampaignAction(
-        null,
-        form({ ...content, segment, campaignKind: "notice-link" }),
-      );
-      expect(send).toMatchObject({ ok: true, total: 1, queued: 1 });
-      expect(mocks.getSegmentRecipients).toHaveBeenCalledWith(segment, false);
-      expect(db.selectDistinct).not.toHaveBeenCalled();
-      expect(values.mock.calls[0][0].content).toMatchObject({
-        notificationKind: STORE_NOTICE_LINK_KIND,
-        ctaUrl: url,
-        ctaLabel: "Abrir página",
-      });
-      const test = await sendCampaignAction(
-        null,
-        form({
-          ...content,
-          segment,
-          campaignKind: "notice-link",
-          mode: "test",
-          testEmail: "admin@example.com",
-        }),
-      );
-      expect(test.ok).toBe(true);
-      for (const html of [
-        mocks.sendEmailBatch.mock.calls[0][0][0].html,
-        mocks.sendEmail.mock.calls[0][0].html,
-      ]) {
-        expect(html).toContain(`href="${url.replace(/&/g, "&amp;")}"`);
-        expect(html).toContain("Abrir página");
-        expect(html).toContain("Copie este endereço se preferir.");
-        expect(html).toContain("background:#cc0000");
-        expect(html).not.toContain("PED-1234");
-        expect(html).not.toContain("Encomenda:");
+        });
+        for (const mode of ["test", "send"]) {
+          const result = await sendCampaignAction(
+            null,
+            form({
+              ...content,
+              segment,
+              campaignKind: "notice-link",
+              mode,
+              testEmail: "admin@example.com",
+            }),
+          );
+          expect(result.ok).toBe(false);
+          expect(result.error).toContain("Use o comunicado sem botão");
+        }
       }
-      expect(mocks.validateStoreOffer).not.toHaveBeenCalled();
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+      expect(mocks.sendEmailBatch).not.toHaveBeenCalled();
+      expect(mocks.getDb).not.toHaveBeenCalled();
+      expect(mocks.getSegmentRecipients).not.toHaveBeenCalled();
     },
   );
 

@@ -54,7 +54,7 @@ export function getOrderNotificationValidationError(
       const valid =
         normalized.length >= (field === "preheader" ? 0 : 3) &&
         normalized.length <= limit &&
-        !/\b(?:correios|ctt)\b/i.test(normalized) &&
+        !/\b(?:correios|ctt|worten)\b/i.test(normalized) &&
         !/[\r\n<>@]/.test(normalized) &&
         !disallowedCustomText.test(normalized);
       if (!valid)
@@ -69,7 +69,7 @@ export function getOrderNotificationValidationError(
       const valid =
         normalized.length > 0 &&
         normalized.length <= 80 &&
-        !/\b(?:correios|ctt)\b/i.test(normalized) &&
+        !/\b(?:correios|ctt|worten)\b/i.test(normalized) &&
         !/[\r\n<>@]/.test(normalized) &&
         !/https?:|www\.|(?:[\w-]+\.)+(?:com|pt|site|net|org)\b/i.test(
           normalized,

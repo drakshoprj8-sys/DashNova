@@ -70,11 +70,6 @@ import {
 } from "./store-offer";
 import { validateStoreOfferAction } from "./store-offer-actions";
 import {
-  STORE_NOTICE_LINK_KIND,
-  buildStoreNoticeLinkHtml,
-  getStoreNoticeLinkValidationError,
-} from "./store-notice-link";
-import {
   STORE_NOTICE_OFFER_KIND,
   buildStoreNoticeOfferHtml,
   getStoreNoticeOfferValidationError,
@@ -499,12 +494,12 @@ export async function sendCampaignAction(
     (parsed.data.segment === "custom" && parsed.data.checkoutMode === "notice");
   let offer: StoreOffer | null = null;
   const noticeOffer = parsed.data.campaignKind === "notice-offer";
-  const noticeLink = parsed.data.campaignKind === "notice-link";
-  if (noticeLink && (!informational || parsed.data.checkoutMode === "checkout"))
+  // Older forms and direct requests must not restore arbitrary-link campaigns.
+  if (parsed.data.campaignKind === "notice-link")
     return {
       ok: false,
       error:
-        "Selecione Todos os clientes ou Pedidos pagos para enviar um comunicado com link.",
+        "Comunicados informativos não incluem links externos ou de pagamento. Use o comunicado sem botão.",
     };
   if (parsed.data.campaignKind === "offer" || noticeOffer) {
     if (!informational || parsed.data.checkoutMode === "checkout")
@@ -541,13 +536,11 @@ export async function sendCampaignAction(
       }
     }
   }
-  const validationError = noticeLink
-    ? getStoreNoticeLinkValidationError(parsed.data)
-    : offer
-      ? null
-      : informational
-        ? getStoreNoticeValidationError(parsed.data)
-        : getOrderNotificationValidationError(parsed.data, pendingCheckout);
+  const validationError = offer
+    ? null
+    : informational
+      ? getStoreNoticeValidationError(parsed.data)
+      : getOrderNotificationValidationError(parsed.data, pendingCheckout);
   if (validationError) {
     return {
       ok: false,
@@ -596,11 +589,9 @@ export async function sendCampaignAction(
         noticeOffer
           ? buildStoreNoticeOfferHtml(input, validatedOffer)
           : buildStoreOfferHtml(validatedOffer, input.vars, ctaLabel)
-    : noticeLink
-      ? buildStoreNoticeLinkHtml
-      : informational
-        ? buildStoreNoticeHtml
-        : buildCampaignHtml;
+    : informational
+      ? buildStoreNoticeHtml
+      : buildCampaignHtml;
 
   if (mode === "test") {
     if (!testEmail) {
@@ -622,7 +613,7 @@ export async function sendCampaignAction(
         title,
         articleName,
         ctaLabel,
-        ctaUrl: noticeLink ? ctaUrl : "{{CHECKOUT_URL}}",
+        ctaUrl: "{{CHECKOUT_URL}}",
         fallbackText,
         vars,
       }),
@@ -709,28 +700,24 @@ export async function sendCampaignAction(
         ? company.email
         : null,
       content: {
-        notificationKind: noticeLink
-          ? STORE_NOTICE_LINK_KIND
-          : noticeOffer
-            ? STORE_NOTICE_OFFER_KIND
-            : offer
-              ? STORE_OFFER_KIND
-              : informational
-                ? STORE_NOTICE_KIND
-                : "pccgvip-order-v1",
+        notificationKind: noticeOffer
+          ? STORE_NOTICE_OFFER_KIND
+          : offer
+            ? STORE_OFFER_KIND
+            : informational
+              ? STORE_NOTICE_KIND
+              : "pccgvip-order-v1",
         ...(offer ? { offer } : {}),
         body,
         headerText: headerName,
         title,
         articleName,
         ctaLabel,
-        ctaUrl: noticeLink
-          ? ctaUrl
-          : offer
-            ? offer.checkoutUrl
-            : informational
-              ? ""
-              : "{{CHECKOUT_URL}}",
+        ctaUrl: offer
+          ? offer.checkoutUrl
+          : informational
+            ? ""
+            : "{{CHECKOUT_URL}}",
         fallbackText,
       },
       audienceFilter: {
@@ -811,7 +798,7 @@ export async function sendCampaignAction(
             title,
             articleName,
             ctaLabel,
-            ctaUrl: noticeLink ? ctaUrl : "{{CHECKOUT_URL}}",
+            ctaUrl: "{{CHECKOUT_URL}}",
             fallbackText,
             vars,
           }),

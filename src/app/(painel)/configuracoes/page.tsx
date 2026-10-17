@@ -9,6 +9,7 @@ import { pixels } from "@/database/schema";
 import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 import { getWorkspaceBranding } from "@/features/branding/queries";
 import { BrandingForm } from "@/features/branding/branding-form";
+import { ResendConnectionCheck } from "@/features/emails/resend-connection-check";
 import {
   Card,
   CardContent,
@@ -120,6 +121,27 @@ export default async function ConfiguracoesPage() {
       </div>
 
       <BrandingForm initial={branding} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Remetente de e-mail</CardTitle>
+          <CardDescription>
+            Endereço usado pelo Resend nos envios da aba Emails.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="break-all text-sm font-medium">
+            {process.env.RESEND_FROM_EMAIL?.trim() ||
+              "Remetente ainda não definido"}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            O e-mail de suporte da loja recebe contactos dos clientes. Alterar
+            esse contacto não muda o remetente dos envios. A verificação abaixo
+            consulta a ligação com o Resend e o domínio, sem enviar mensagens.
+          </p>
+          <ResendConnectionCheck />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 md:grid-cols-2">
         {services.map((service) => (
