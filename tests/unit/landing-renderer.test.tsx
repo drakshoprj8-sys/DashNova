@@ -95,8 +95,11 @@ describe("LandingRenderer", () => {
   it("preserva os contêineres da descrição visual após higienizar o HTML", () => {
     const { container } = render(<OzamaDescription />);
     const hero = container.querySelector(".ozama-hero");
+    expect(hero?.querySelector(".ozama-container")?.children.length).toBe(2);
     expect(hero?.querySelector(".ozama-main-title")).not.toBeNull();
-    expect(hero?.querySelector('img[src="/landing/ozama-alpha.webp"]')).not.toBeNull();
+    expect(
+      hero?.querySelector('img[src="/landing/ozama-alpha.webp"]'),
+    ).not.toBeNull();
     expect(container.querySelector(".ozama-footer")).not.toBeNull();
     expect(container.querySelector("script, iframe")).toBeNull();
   });
