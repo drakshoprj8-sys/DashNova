@@ -105,14 +105,14 @@ export function StorefrontFooter({
                 <img
                   src="/landing/mbway.svg"
                   alt="MB WAY"
-                  className="h-4 w-auto"
+                  style={{ width: 44, height: 22, objectFit: "contain" }}
                 />
               </span>
               <span className="flex h-8 items-center rounded bg-white px-2">
                 <img
                   src="/landing/multibanco.svg"
                   alt="Multibanco"
-                  className="h-5 w-auto"
+                  style={{ width: 24, height: 24, objectFit: "contain" }}
                 />
               </span>
               {/* eslint-enable @next/next/no-img-element */}
