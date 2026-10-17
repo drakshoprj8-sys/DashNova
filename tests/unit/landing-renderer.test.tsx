@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import { LandingRenderer } from "@/features/landing-pages/render/landing-renderer";
+import OzamaDescription from "@/features/landing-pages/render/ozama-description";
 import { DEFAULT_THEME } from "@/features/landing-pages/defaults";
 import {
   readHeaderSettings,
@@ -91,6 +92,15 @@ beforeEach(() => {
 });
 
 describe("LandingRenderer", () => {
+  it("preserva os contêineres da descrição visual após higienizar o HTML", () => {
+    const { container } = render(<OzamaDescription />);
+    const hero = container.querySelector(".ozama-hero");
+    expect(hero?.querySelector(".ozama-main-title")).not.toBeNull();
+    expect(hero?.querySelector('img[src="/landing/ozama-alpha.webp"]')).not.toBeNull();
+    expect(container.querySelector(".ozama-footer")).not.toBeNull();
+    expect(container.querySelector("script, iframe")).toBeNull();
+  });
+
   it("alterna entre descrição com imagem e envios por clique e teclado", () => {
     render(
       <LandingRenderer
