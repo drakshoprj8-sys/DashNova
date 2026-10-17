@@ -222,6 +222,23 @@ export function DesignPanel({
         </div>
       </PanelSection>
 
+      <PanelSection
+        title="Rodapé"
+        description="Cores da área com a marca, apoio ao cliente e informações legais."
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ThemeColor
+            label="Fundo do rodapé"
+            field="footerBackground"
+            state={state}
+          />
+          <ThemeColor
+            label="Texto do rodapé"
+            field="footerTextColor"
+            state={state}
+          />
+        </div>
+      </PanelSection>
       <PanelSection title="Tipografia">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">

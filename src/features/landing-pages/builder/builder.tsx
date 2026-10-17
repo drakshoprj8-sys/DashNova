@@ -169,6 +169,7 @@ export function LandingBuilder({
   // a partir do rascunho em edição.
   const snapshot: LandingSnapshot = React.useMemo(() => {
     const snapshot: LandingSnapshot = {
+      supportEmail: branding?.supportEmail,
       version: page.draftVersion,
       publicName: state.doc.publicName || page.publicName || page.name,
       logoUrl: state.doc.logoUrl || null,
@@ -361,7 +362,17 @@ export function LandingBuilder({
             </aside>
 
             <main className="min-w-0 flex-1 overflow-y-auto bg-muted/40">
-              <div className="sticky top-0 z-10 flex items-center justify-center gap-1 border-b bg-background/90 px-3 py-2 backdrop-blur">
+              <div className="sticky top-0 z-10 flex flex-wrap items-center justify-center gap-1 border-b bg-background/90 px-3 py-2 backdrop-blur">
+                {/ozama|tengu/i.test(page.product?.name ?? "") ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mr-2"
+                    onClick={state.applyOzamaDetails}
+                  >
+                    Aplicar descrição e rodapé
+                  </Button>
+                ) : null}
                 {page.product ? (
                   <Button
                     size="sm"

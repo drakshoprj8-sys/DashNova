@@ -30,6 +30,7 @@ export function withWorkspaceHeader(
   return {
     ...snapshot,
     publicName: branding.storeName,
+    supportEmail: branding.supportEmail,
     logoUrl: branding.logoUrl,
     theme: {
       ...snapshot.theme,

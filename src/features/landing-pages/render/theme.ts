@@ -118,7 +118,26 @@ export function animationClass(style: BlockStyle | undefined): string {
  * CSS global da página pública. Fica aqui, e não no `globals.css`, porque
  * só se aplica dentro de uma landing renderizada — o painel não carrega isto.
  */
+const NARROW_LANDING_CSS = `
+ .lp-product-offer { padding-top: 16px !important; padding-bottom: 32px !important; }
+ .lp-product-grid { grid-template-columns: minmax(0, 1fr); gap: 26px; }
+ .lp-product-title { font-size: 27px; line-height: 1.25; }
+ .lp-product-payment { margin: 24px 0; }
+ .lp-product-options [role=radio] { min-width: 0; flex: 1; }
+ .lp-product-quantity button { width: 32px; height: 48px; }
+ .lp-product-quantity span { width: 32px; }
+ .lp-product-promises { font-size: 12px; }
+ .lp-detail-tabs button { font-size: 13px; padding: 15px 12px; }
+ .lp-reviews-grid { grid-template-columns: minmax(0,1fr); }
+ .lp-reviews-summary { border-right: 0; border-bottom: 1px solid #e2e5e9; }
+ .lp-footer-columns { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 30px 20px; padding: 30px 0; }
+ .lp-footer-columns > div:first-child { grid-column: 1 / -1; }
+ .lp-footer-assurances { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px 10px; font-size: 11px; }
+ .lp-footer-bottom { flex-direction: column; font-size: 11px; }
+`;
+
 export const LANDING_BASE_CSS = `
+.lp-root { container-type: inline-size; container-name: landing; }
 .lp-root h1, .lp-root h2, .lp-root h3 { font-family: var(--lp-heading-font); letter-spacing: -0.02em; }
 .lp-root a { color: inherit; }
 .lp-root :focus-visible { outline: 3px solid var(--lp-primary); outline-offset: 2px; }
@@ -154,16 +173,29 @@ export const LANDING_BASE_CSS = `
 .lp-product-buy a { min-height: 50px; border-radius: 999px !important; box-shadow: 0 6px 15px color-mix(in srgb, var(--lp-button) 18%, transparent); }
 .lp-product-promises { display: grid; gap: 12px; margin: 22px 0 0; padding: 0; list-style: none; color: #7b8795; font-size: 14px; }
 .lp-product-promises li { display: flex; align-items: center; gap: 10px; }
+.lp-product-description { padding-top: 0 !important; padding-bottom: 0 !important; }
+.lp-detail-tabs { display: flex; gap: 4px; border-bottom: 1px solid #e2e5e9; overflow-x: auto; }
+.lp-detail-tabs button { flex: none; padding: 17px 18px; font-size: 14px; font-weight: 600; color: #748194; border-bottom: 3px solid transparent; cursor: pointer; }
+.lp-detail-tabs button[aria-selected=true] { color: var(--lp-primary); border-bottom-color: var(--lp-primary); }
+.lp-shipping-panel { padding: 24px 0 28px; color: #718096; font-size: 14px; line-height: 1.8; }
+.lp-shipping-panel p + p { margin-top: 10px; }
+.lp-shipping-panel strong { color: var(--lp-text); font-weight: 700; }
+.lp-ozama-description { overflow: hidden; border-radius: 5px; }
+.lp-reviews-section { border-top: 1px solid #e2e5e9; }
+.lp-reviews-grid { display: grid; grid-template-columns: minmax(220px, 26%) minmax(0, 1fr); border: 1px solid #e2e5e9; border-radius: 14px; overflow: hidden; }
+.lp-reviews-summary { padding: 26px 22px; border-right: 1px solid #e2e5e9; }
+.lp-review-card { padding: 24px; }
+.lp-review-card + .lp-review-card { border-top: 1px solid #edf0f3; }
+.lp-store-footer { margin-top: 40px; }
+.lp-footer-assurances { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 28px; padding: 30px 0; border-bottom: 1px solid rgb(255 255 255 / .15); font-size: 12px; font-weight: 600; opacity: .8; }
+.lp-footer-assurances span { display: inline-flex; align-items: center; gap: 7px; }
+.lp-footer-assurances svg { width: 15px; height: 15px; opacity: .75; }
+.lp-footer-columns { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 40px; padding: 38px 0 42px; }
+.lp-footer-bottom { display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid rgb(255 255 255 / .15); padding: 22px 0; font-size: 12px; opacity: .7; }
 @media (max-width: 767px) {
- .lp-product-offer { padding-top: 16px !important; padding-bottom: 32px !important; }
- .lp-product-grid { grid-template-columns: minmax(0, 1fr); gap: 26px; }
- .lp-product-title { font-size: 27px; line-height: 1.25; }
- .lp-product-payment { margin: 24px 0; }
- .lp-product-options [role=radio] { min-width: 0; flex: 1; }
- .lp-product-quantity button { width: 32px; height: 48px; }
- .lp-product-quantity span { width: 32px; }
- .lp-product-promises { font-size: 12px; }
+ ${NARROW_LANDING_CSS}
 }
+@container landing (max-width: 767px) { ${NARROW_LANDING_CSS} }
 .lp-anim-fade { animation: lp-fade .5s ease both; }
 .lp-anim-rise { animation: lp-rise .5s ease both; }
 @keyframes lp-fade { from { opacity: 0 } to { opacity: 1 } }

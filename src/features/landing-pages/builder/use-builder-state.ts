@@ -333,6 +333,60 @@ export function useBuilderState(pageId: string, initial: BuilderDoc) {
     [update],
   );
 
+  const applyOzamaDetails = React.useCallback(() => {
+    update((current) => {
+      const offer =
+        current.content.blocks.find(
+          (block) => block.type === "product_offer",
+        ) ?? createBlock("product_offer");
+      const description =
+        current.content.blocks.find((block) => block.type === "description") ??
+        createBlock("description");
+      const reviews =
+        current.content.blocks.find((block) => block.type === "reviews") ??
+        createBlock("reviews");
+      const faq = current.content.blocks.find((block) => block.type === "faq");
+      const shipping =
+        typeof offer.props.shipping === "string"
+          ? offer.props.shipping
+          : "Portes grátis acima de 19,99 €";
+      return {
+        ...current,
+        content: {
+          blocks: [
+            {
+              ...offer,
+              anchorId: "oferta",
+              props: {
+                ...offer.props,
+                shipping: /Entrega/i.test(shipping)
+                  ? shipping
+                  : `${shipping} · Entrega em 2–4 dias úteis`,
+              },
+            },
+            {
+              ...description,
+              props: {
+                ...description.props,
+                layout: "ozama-alpha",
+                showShippingTab: true,
+              },
+            },
+            { ...reviews, anchorId: "avaliacoes" },
+            ...(faq ? [{ ...faq, anchorId: "perguntas-frequentes" }] : []),
+          ],
+        },
+        theme: {
+          ...current.theme,
+          footerBackground: "#2b2b29",
+          footerTextColor: "#f5f5f5",
+          headerBackground: "#e30613",
+          headerTextColor: "#ffffff",
+        },
+      };
+    });
+  }, [update]);
+
   const setTracking = React.useCallback(
     (patch: Partial<LandingTracking>) =>
       update((current) => ({
@@ -378,6 +432,7 @@ export function useBuilderState(pageId: string, initial: BuilderDoc) {
     setTheme,
     setIdentity,
     applyProductLayout,
+    applyOzamaDetails,
     setSeo,
     setTracking,
     setCustomCode,

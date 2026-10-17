@@ -631,6 +631,32 @@ export const BLOCK_CATALOG: Record<BlockType, BlockDef> = {
     fields: [
       { key: "title", label: "Título", type: "text" },
       {
+        key: "layout",
+        label: "Estilo da descrição",
+        type: "select",
+        options: [
+          { value: "standard", label: "Texto e imagem" },
+          { value: "ozama-alpha", label: "Visual gaming OZAMA com foto" },
+        ],
+      },
+      {
+        key: "imageUrl",
+        label: "Imagem da descrição (estilo simples)",
+        type: "image",
+      },
+      {
+        key: "showShippingTab",
+        label: "Mostrar aba Envios & Devoluções",
+        type: "boolean",
+      },
+      {
+        key: "shippingText",
+        label: "Prazo e método de envio",
+        type: "textarea",
+      },
+      { key: "shippingCost", label: "Custo do envio", type: "textarea" },
+      { key: "returnsText", label: "Condições de devolução", type: "textarea" },
+      {
         key: "useProductDescription",
         label: "Usar a descrição do produto",
         type: "boolean",
@@ -639,6 +665,15 @@ export const BLOCK_CATALOG: Record<BlockType, BlockDef> = {
     ],
     defaults: {
       title: "Descrição",
+      layout: "standard",
+      imageUrl: "",
+      showShippingTab: false,
+      shippingText:
+        "Entregamos em 2 a 4 dias úteis, através de transportadora com seguimento.",
+      shippingCost:
+        "Portes grátis acima de 19,99 €. O custo final do envio é apresentado no checkout.",
+      returnsText:
+        "Tem 14 dias para solicitar a devolução do artigo. Consulte as condições da nossa política de devoluções.",
       useProductDescription: true,
       body: "",
     },

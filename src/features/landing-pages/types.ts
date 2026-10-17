@@ -193,6 +193,7 @@ export interface LandingProductVariant {
  * fica congelado em `landing_pages.published_snapshot` a cada publicação.
  */
 export interface LandingSnapshot {
+  supportEmail?: string | null;
   version: number;
   publicName: string;
   logoUrl: string | null;

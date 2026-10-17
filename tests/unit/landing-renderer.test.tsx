@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { LandingRenderer } from "@/features/landing-pages/render/landing-renderer";
 import { DEFAULT_THEME } from "@/features/landing-pages/defaults";
@@ -91,6 +91,78 @@ beforeEach(() => {
 });
 
 describe("LandingRenderer", () => {
+  it("alterna entre descrição com imagem e envios por clique e teclado", () => {
+    render(
+      <LandingRenderer
+        snapshot={snapshotWith([
+          block("description", {
+            showShippingTab: true,
+            imageUrl: "/landing/ozama-alpha.webp",
+            shippingText: "Entrega em 2 a 4 dias úteis.",
+          }),
+        ])}
+        reviews={[]}
+        pageId="tabs-page"
+        mode="editor"
+      />,
+    );
+    const description = screen.getByRole("tab", {
+      name: "Descrição",
+    });
+    const shipping = screen.getByRole("tab", {
+      name: "Envios & Devoluções",
+    });
+    expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe(
+      description.id,
+    );
+    expect(
+      screen.getByRole("img", { name: "Cadeira de Teste" }).getAttribute("src"),
+    ).toBe("/landing/ozama-alpha.webp");
+    fireEvent.click(shipping);
+    expect(screen.getByRole("tabpanel").textContent).toContain(
+      "Entrega em 2 a 4 dias úteis.",
+    );
+    fireEvent.keyDown(shipping, { key: "ArrowLeft" });
+    expect(description.getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("calcula resumo e distribuição somente com as avaliações publicadas", () => {
+    const reviews = [
+      {
+        name: "Cliente A",
+        location: "Porto",
+        date: "16/10/2026",
+        stars: 5,
+        title: "Confortável",
+        text: "Gostei da cadeira.",
+        helpful: 2,
+        verifiedPurchase: true,
+      },
+      {
+        name: "Cliente B",
+        location: "Lisboa",
+        date: "15/10/2026",
+        stars: 3,
+        title: "Boa",
+        text: "Ajusta bem.",
+        helpful: 0,
+        verifiedPurchase: false,
+      },
+    ];
+    const { container } = render(
+      <LandingRenderer
+        snapshot={snapshotWith([block("reviews")])}
+        reviews={reviews}
+        pageId="reviews-page"
+        mode="editor"
+      />,
+    );
+    expect(screen.getByText("4,0")).toBeTruthy();
+    expect(screen.getAllByText("50%").length).toBe(2);
+    expect(screen.getAllByText("Compra verificada").length).toBe(1);
+    expect(container.querySelectorAll(".lp-review-card").length).toBe(2);
+    expect(screen.queryByText("1796")).toBeNull();
+  });
   it("renderiza as cores e a identidade escolhidas e permite herdar a configuração global", () => {
     const snapshot = snapshotWith([block("product_offer")]);
     const brand = {
@@ -139,10 +211,14 @@ describe("LandingRenderer", () => {
 
     expect(screen.getByRole("link", { name: "Loja Teste" })).toBeTruthy();
     expect(screen.getAllByText("Loja Teste").length).toBeGreaterThan(0);
-    expect(screen.getByText(/Loja Teste · Pagamento seguro/)).toBeTruthy();
+    expect(
+      screen.getByText(/Loja Teste\. Todos os direitos reservados/),
+    ).toBeTruthy();
     expect(screen.queryByText(/PCDIGA/i)).toBeNull();
     expect(screen.queryByText("Rodapé antigo")).toBeNull();
-    expect(screen.getByRole("link", { name: "Termos" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Termos e Condições" }),
+    ).toBeTruthy();
   });
 
   it("mostra o preço do produto e o desconto calculado", () => {

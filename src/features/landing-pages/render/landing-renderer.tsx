@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Star,
   Truck,
+  ThumbsUp,
   X,
 } from "lucide-react";
 
@@ -35,6 +36,9 @@ import {
   type LandingSnapshot,
 } from "../types";
 import { sanitizeHtml } from "../sanitize";
+import { StorefrontFooter } from "./storefront-footer";
+
+const OzamaDescription = React.lazy(() => import("./ozama-description"));
 import {
   animationClass,
   blockStyleToCss,
@@ -340,7 +344,7 @@ function AnnouncementBlock({ block }: { block: LandingBlock }) {
 }
 
 function StandardLandingHeader() {
-  const { product, snapshot } = useRuntime();
+  const { snapshot } = useRuntime();
   const publicName = snapshot.publicName.trim() || STANDARD_STOREFRONT.name;
   const logoUrl = snapshot.logoUrl?.trim() || STANDARD_STOREFRONT.logoUrl;
 
@@ -354,7 +358,13 @@ function StandardLandingHeader() {
       }}
     >
       <a
-        href={product ? `/p/${product.slug}` : "#comprar"}
+        href={
+          snapshot.content.blocks.some(
+            (block) => block.type === "product_offer" && !block.hidden,
+          )
+            ? "#oferta"
+            : "#top"
+        }
         className="flex items-center justify-center"
         aria-label={publicName}
       >
@@ -1621,26 +1631,145 @@ function TrustBadgesBlock({ block }: { block: LandingBlock }) {
 
 function DescriptionBlock({ block }: { block: LandingBlock }) {
   const { product } = useRuntime();
+  const [tab, setTab] = React.useState<"description" | "shipping">(
+    "description",
+  );
+  const tabId = React.useId();
+  const tabRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
+  const rich = propText(block.props, "layout") === "ozama-alpha";
+  const tabbed = propBool(block.props, "showShippingTab", false);
+  const imageUrl = propText(block.props, "imageUrl");
   const useProduct = propBool(block.props, "useProductDescription", true);
   const body = useProduct
     ? product?.description || propText(block.props, "body")
     : propText(block.props, "body");
 
-  if (!body?.trim()) return null;
+  if (!body?.trim() && !rich && !imageUrl) return null;
+
+  const description = rich ? (
+    <React.Suspense
+      fallback={
+        <div
+          className="min-h-[420px] animate-pulse rounded-lg bg-zinc-900"
+          aria-label="A carregar descrição"
+        />
+      }
+    >
+      <OzamaDescription />
+    </React.Suspense>
+  ) : (
+    <div className="space-y-4 text-base leading-relaxed">
+      {imageUrl ? (
+        <Img
+          src={imageUrl}
+          alt={product?.name ?? "Imagem da descrição"}
+          className="mx-auto h-auto max-w-full"
+        />
+      ) : null}
+      {body
+        ?.split(/\n{2,}|\n/)
+        .filter(Boolean)
+        .map((paragraph, index) => (
+          <p key={index}>{paragraph}</p>
+        ))}
+    </div>
+  );
+
+  function moveTab(event: React.KeyboardEvent, index: number) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === "Home" ? 0 : event.key === "End" ? 1 : 1 - index;
+    setTab(next === 0 ? "description" : "shipping");
+    tabRefs.current[next]?.focus();
+  }
 
   return (
-    <Section block={block}>
-      <Heading className="mb-4">
-        {propText(block.props, "title", "Descrição")}
-      </Heading>
-      <div className="space-y-4 text-base leading-relaxed">
-        {body
-          .split(/\n{2,}|\n/)
-          .filter(Boolean)
-          .map((paragraph, index) => (
-            <p key={index}>{paragraph}</p>
-          ))}
-      </div>
+    <Section block={block} className="lp-product-description">
+      {tabbed ? (
+        <>
+          <div
+            className="lp-detail-tabs"
+            role="tablist"
+            aria-label="Informações do produto"
+          >
+            {[
+              ["description", "Descrição"],
+              ["shipping", "Envios & Devoluções"],
+            ].map(([value, label], index) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                id={`${tabId}-${value}`}
+                aria-controls={`${tabId}-${value}-panel`}
+                aria-selected={tab === value}
+                tabIndex={tab === value ? 0 : -1}
+                ref={(node) => {
+                  tabRefs.current[index] = node;
+                }}
+                onKeyDown={(event) => moveTab(event, index)}
+                onClick={() => setTab(value as "description" | "shipping")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div
+            role="tabpanel"
+            id={`${tabId}-description-panel`}
+            aria-labelledby={`${tabId}-description`}
+            hidden={tab !== "description"}
+            className="py-6"
+          >
+            {description}
+          </div>
+          <div
+            role="tabpanel"
+            id={`${tabId}-shipping-panel`}
+            aria-labelledby={`${tabId}-shipping`}
+            hidden={tab !== "shipping"}
+            className="lp-shipping-panel"
+          >
+            <p>
+              <strong>Envio:</strong>{" "}
+              {propText(
+                block.props,
+                "shippingText",
+                "Entregamos em 2 a 4 dias úteis, através de transportadora com seguimento.",
+              )}
+            </p>
+            <p>
+              <strong>Custo:</strong>{" "}
+              {propText(
+                block.props,
+                "shippingCost",
+                "Portes grátis acima de 19,99 €. O custo final do envio é apresentado no checkout.",
+              )}
+            </p>
+            <p>
+              <strong>Devoluções:</strong>{" "}
+              {propText(
+                block.props,
+                "returnsText",
+                "Tem 14 dias para solicitar a devolução do artigo. Consulte as condições da nossa política de devoluções.",
+              )}
+            </p>
+            <a
+              href="/legal/devolucoes"
+              className="mt-3 inline-block underline underline-offset-4"
+            >
+              Consultar política de devoluções
+            </a>
+          </div>
+        </>
+      ) : (
+        <>
+          <Heading className="mb-4">
+            {propText(block.props, "title", "Descrição")}
+          </Heading>
+          {description}
+        </>
+      )}
     </Section>
   );
 }
@@ -1822,79 +1951,126 @@ function ReviewsBlock({ block }: { block: LandingBlock }) {
   const title = propText(block.props, "title", "Avaliações dos clientes");
   const reviewBlock = { ...block, anchorId: block.anchorId || "avaliacoes" };
 
-  if (list.length === 0) {
-    const message = propText(block.props, "emptyMessage");
-    if (!message) return null;
-    return (
-      <Section block={reviewBlock}>
-        <Heading className="mb-4">{title}</Heading>
-        <p
-          className="p-8 text-center text-sm"
-          style={{
-            borderRadius: "var(--lp-radius)",
-            border: "1px dashed var(--lp-border)",
-            color: "var(--lp-muted)",
-          }}
-        >
-          {message}
-        </p>
-      </Section>
-    );
-  }
-
-  const average = list.reduce((sum, r) => sum + r.stars, 0) / list.length;
+  const average = reviews.length
+    ? reviews.reduce((sum, r) => sum + r.stars, 0) / reviews.length
+    : null;
 
   return (
-    <Section block={reviewBlock}>
+    <Section block={reviewBlock} className="lp-reviews-section">
       <Heading className="mb-4">{title}</Heading>
-      <div
-        className="flex flex-wrap items-center gap-3 p-4"
-        style={{
-          borderRadius: "var(--lp-radius)",
-          backgroundColor: "var(--lp-surface)",
-        }}
-      >
-        <span className="text-3xl font-black">
-          {average.toLocaleString(locale, {
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1,
-          })}
-        </span>
-        <StarRow value={average} />
-        <span className="text-sm" style={{ color: "var(--lp-muted)" }}>
-          {list.length} {list.length === 1 ? "avaliação" : "avaliações"}
-        </span>
-      </div>
-      <div className="mt-4 space-y-4">
-        {list.map((review, index) => (
-          <article
-            key={`${review.name}-${index}`}
-            className="p-4"
-            style={{
-              borderRadius: "var(--lp-radius)",
-              border: "1px solid var(--lp-border)",
-            }}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <strong className="text-sm">{review.name}</strong>
-              {review.verifiedPurchase ? (
-                <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-                  <BadgeCheck className="size-3.5" /> Compra verificada
+      <div className="lp-reviews-grid">
+        <aside
+          className="lp-reviews-summary"
+          aria-label="Resumo das avaliações"
+        >
+          <div className="flex items-baseline gap-1.5">
+            <strong className="text-5xl font-extrabold">
+              {average === null
+                ? "—"
+                : average.toLocaleString(locale, {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}
+            </strong>
+            <span className="text-xs text-slate-400">/ 5</span>
+          </div>
+          <div className="mt-1">
+            <StarRow value={average ?? 0} />
+          </div>
+          <p className="mt-4 text-xs text-slate-500">
+            {reviews.length ? (
+              <>
+                Baseado em <strong>{reviews.length}</strong>{" "}
+                {reviews.length === 1 ? "avaliação" : "avaliações"}
+              </>
+            ) : (
+              "Ainda sem avaliações"
+            )}
+          </p>
+          <div className="mt-5 space-y-2.5">
+            {[5, 4, 3, 2, 1].map((stars) => {
+              const count = reviews.filter(
+                (review) => Math.round(review.stars) === stars,
+              ).length;
+              const percent = reviews.length
+                ? Math.round((count / reviews.length) * 100)
+                : 0;
+              return (
+                <div
+                  className="flex items-center gap-2 text-[11px] text-slate-500"
+                  key={stars}
+                >
+                  <span className="w-5">
+                    {stars}
+                    <span className="text-amber-400">★</span>
+                  </span>
+                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <span
+                      className="block h-full rounded-full bg-amber-400"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </span>
+                  <span className="w-8 text-right">{percent}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+        <div className="lp-review-list">
+          {list.length === 0 ? (
+            <div className="px-6 py-12 text-sm leading-relaxed text-slate-500">
+              {propText(
+                block.props,
+                "emptyMessage",
+                "As avaliações de clientes reais aparecerão aqui após as primeiras compras.",
+              )}
+            </div>
+          ) : null}
+          {list.map((review, index) => (
+            <article key={`${review.name}-${index}`} className="lp-review-card">
+              <div className="flex items-center gap-3">
+                <span
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-pink-100 text-xs font-semibold text-pink-600"
+                  aria-hidden
+                >
+                  {review.name
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join("")}
+                </span>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-sm font-medium">
+                      {review.name}
+                    </strong>
+                    {review.verifiedPurchase ? (
+                      <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
+                        <BadgeCheck className="size-3" /> Compra verificada
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {[review.location, review.date].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <StarRow value={review.stars} />
+                {review.title ? (
+                  <span className="text-sm font-bold">{review.title}</span>
+                ) : null}
+              </div>
+              <p className="mt-1.5 text-sm leading-relaxed">{review.text}</p>
+              {review.helpful > 0 ? (
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] text-slate-500">
+                  <ThumbsUp className="size-3" />
+                  Útil ({review.helpful})
                 </span>
               ) : null}
-              <span className="text-xs" style={{ color: "var(--lp-muted)" }}>
-                {review.location}
-              </span>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <StarRow value={review.stars} />
-              {review.title ? (
-                <span className="text-sm font-bold">{review.title}</span>
-              ) : null}
-            </div>
-            <p className="mt-1.5 text-sm leading-relaxed">{review.text}</p>
-          </article>
-        ))}
+            </article>
+          ))}
+        </div>
       </div>
     </Section>
   );
@@ -1932,7 +2108,9 @@ function FaqBlock({ block }: { block: LandingBlock }) {
   if (items.length === 0) return null;
 
   return (
-    <Section block={block}>
+    <Section
+      block={{ ...block, anchorId: block.anchorId || "perguntas-frequentes" }}
+    >
       <Heading className="mb-4">
         {propText(block.props, "title", "Perguntas frequentes")}
       </Heading>
@@ -2283,26 +2461,15 @@ function StandardLandingFooter() {
   const { snapshot } = useRuntime();
   const publicName = snapshot.publicName.trim() || STANDARD_STOREFRONT.name;
 
+  const visible = snapshot.content.blocks.filter((block) => !block.hidden);
   return (
-    <footer className="border-t border-zinc-200 bg-white px-4 py-5 text-center text-xs text-zinc-500">
-      <div className="mx-auto w-full max-w-6xl">
-        <p>
-          © {new Date().getFullYear()} {publicName} · Pagamento seguro por MB
-          WAY e Multibanco
-        </p>
-        <nav className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-          <a href="/legal/termos" className="hover:text-zinc-800">
-            Termos
-          </a>
-          <a href="/legal/privacidade" className="hover:text-zinc-800">
-            Privacidade
-          </a>
-          <a href="/legal/devolucoes" className="hover:text-zinc-800">
-            Devoluções
-          </a>
-        </nav>
-      </div>
-    </footer>
+    <StorefrontFooter
+      storeName={publicName}
+      supportEmail={snapshot.supportEmail}
+      hasReviews={visible.some((block) => block.type === "reviews")}
+      hasFaq={visible.some((block) => block.type === "faq")}
+      hasOffer={visible.some((block) => block.type === "product_offer")}
+    />
   );
 }
 
@@ -2589,6 +2756,7 @@ export function LandingRenderer({
         <style dangerouslySetInnerHTML={{ __html: snapshot.customCode.css }} />
       ) : null}
       <div
+        id="top"
         className={cn("lp-root flex min-h-svh flex-col", className)}
         style={themeToCssVars(snapshot.theme)}
       >
