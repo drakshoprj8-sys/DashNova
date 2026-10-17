@@ -1,6 +1,12 @@
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { CampaignForm } from "@/features/emails/campaign-form";
 import { STORE_NOTICE_PREFERENCES } from "@/features/emails/store-notice";
 import {
