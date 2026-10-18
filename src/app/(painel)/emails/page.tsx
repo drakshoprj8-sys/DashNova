@@ -22,6 +22,8 @@ import {
 import { SEGMENTS, type SegmentKey } from "@/features/emails/types";
 import { isResendConfigured } from "@/features/emails/resend-provider";
 import { CampaignForm } from "@/features/emails/campaign-form";
+import { getPendingAudienceDiagnostics } from "@/features/emails/pending-audience";
+import { PendingAudiencePanel } from "@/features/emails/pending-audience-panel";
 import { ResendConnectionCheck } from "@/features/emails/resend-connection-check";
 import { PaidCustomersImport } from "@/features/emails/paid-customers-import";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -83,6 +85,7 @@ export default async function EmailsPage({
     customRecipients,
     overview,
     pendingRecipients,
+    pendingDiagnostics,
   ] = await Promise.all([
     getSegmentCounts(),
     getConsolidatedCustomerCounts(),
@@ -96,6 +99,11 @@ export default async function EmailsPage({
     getSegmentRecipients("pending").then((recipients) =>
       recipients.slice(0, 25),
     ),
+    // Painel informativo: se falhar, a página de envio continua funcionando.
+    getPendingAudienceDiagnostics().catch((error) => {
+      console.error("[emails] diagnóstico de pendentes falhou", error);
+      return null;
+    }),
   ]);
   const resendReady = isResendConfigured();
   const summary = [
@@ -189,6 +197,10 @@ export default async function EmailsPage({
             </AlertDescription>
           </Alert>
         )}
+
+      {pendingDiagnostics && pendingDiagnostics.total > 0 && (
+        <PendingAudiencePanel summary={pendingDiagnostics} />
+      )}
 
       <CampaignForm
         counts={counts}
