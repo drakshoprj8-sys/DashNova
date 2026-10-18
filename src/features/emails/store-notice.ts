@@ -8,7 +8,16 @@ import { buildCampaignHtml, DEFAULT_CAMPAIGN_TEMPLATE } from "./template";
 import type { SegmentKey } from "./types";
 
 export function isStoreNoticeSegment(segment: SegmentKey): boolean {
-  return ["all", "paid", "imported_paid", "imported_pending"].includes(segment);
+  // "no_orders" entra aqui pelo mesmo motivo que os importados: nunca há um
+  // pedido real para anexar um checkout, então só o comunicado (+ oferta
+  // verificada opcional) pode ser enviado a esse público.
+  return [
+    "all",
+    "paid",
+    "imported_paid",
+    "imported_pending",
+    "no_orders",
+  ].includes(segment);
 }
 
 export const STORE_NOTICE_KIND = "pccgvip-store-notice-v1";

@@ -32,7 +32,13 @@ export function StoreNoticeEditor({
 }: {
   value: NotificationPreferences;
   onChange: (value: NotificationPreferences) => void;
-  audience?: "all" | "paid" | "imported_paid" | "imported_pending" | "custom";
+  audience?:
+    | "all"
+    | "paid"
+    | "imported_paid"
+    | "imported_pending"
+    | "no_orders"
+    | "custom";
   hideSubject?: boolean;
   /** Botão vermelho opcional: link do checkout de um produto da própria loja. */
   offerUrl?: string;
@@ -58,7 +64,9 @@ export function StoreNoticeEditor({
             ? "Personalizar email para clientes pagos"
             : audience === "imported_pending"
               ? "Personalizar email para clientes pendentes"
-              : "Personalizar email para clientes"}
+              : audience === "no_orders"
+                ? "Personalizar email para quem ainda não comprou"
+                : "Personalizar email para clientes"}
         </h3>
         <Button
           type="button"
@@ -78,7 +86,9 @@ export function StoreNoticeEditor({
       <p className="bg-muted/40 text-muted-foreground rounded-md border p-3 text-sm">
         {audience === "paid" || audience === "imported_paid"
           ? "Envie informações da PCCGVIP aos clientes classificados como pagos na aba Clientes, incluindo os importados."
-          : "Envie informações da PCCGVIP aos contatos elegíveis da aba Clientes, incluindo quem não tem pedido."}{" "}
+          : audience === "no_orders"
+            ? "Envie informações da PCCGVIP a quem está cadastrado mas ainda não fez nenhum pedido."
+            : "Envie informações da PCCGVIP aos contatos elegíveis da aba Clientes, incluindo quem não tem pedido."}{" "}
         {hasOffer
           ? "O botão abaixo leva ao checkout de produto verificado que você colou; não há cobrança de pedidos anteriores."
           : "O comunicado é enviado sem botão ou link de pagamento."}{" "}

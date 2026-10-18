@@ -22,6 +22,7 @@ import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 import { CUSTOMER_IMPORT_STATUS_TAGS } from "@/features/customers/customer-utils";
 
 import { SEGMENTS, type SegmentKey } from "@/features/emails/types";
+import { isStoreNoticeSegment } from "@/features/emails/store-notice";
 
 // Reexporta para quem já importava daqui — o conteúdo client-safe vive
 // em `./types` (sem tocar no cliente do banco).
@@ -207,7 +208,10 @@ export async function getSegmentRecipients(
         isNull(customers.deletedAt),
         eq(customers.marketingOptOut, false),
         eq(customers.isBlocked, false),
-        ["all", "paid", "imported_paid", "imported_pending"].includes(segment)
+        // Mesma lista de públicos informativos de isStoreNoticeSegment: exige
+        // consentimento de marketing porque nenhum deles tem pedido real
+        // obrigando o envio (ao contrário de pending/refused).
+        isStoreNoticeSegment(segment)
           ? eq(customers.acceptsEmail, true)
           : undefined,
         audienceCondition,

@@ -1102,7 +1102,8 @@ export function CampaignForm({
                       ? "custom"
                       : segment === "paid" ||
                           segment === "imported_paid" ||
-                          segment === "imported_pending"
+                          segment === "imported_pending" ||
+                          segment === "no_orders"
                         ? segment
                         : "all"
                   }

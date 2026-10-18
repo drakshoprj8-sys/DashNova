@@ -162,7 +162,7 @@ describe("notification server boundary", () => {
       "Ana, confira as novidades",
     );
   });
-  it.each(["all", "paid", "imported_paid", "imported_pending"])(
+  it.each(["all", "paid", "imported_paid", "imported_pending", "no_orders"])(
     "recusa links arbitrários antes do teste e do lote no público %s",
     async (segment) => {
       for (const url of [
@@ -228,7 +228,7 @@ describe("notification server boundary", () => {
       expect(mocks.getDb).not.toHaveBeenCalled();
     },
   );
-  it.each(["all", "paid"])(
+  it.each(["all", "paid", "no_orders"])(
     "envia comunicado com checkout ao público %s sem exigir pedidos pendentes",
     async (segment) => {
       const values = vi.fn().mockReturnValue({
@@ -283,7 +283,7 @@ describe("notification server boundary", () => {
     },
   );
 
-  it.each(["all", "paid"])(
+  it.each(["all", "paid", "no_orders"])(
     "inclui checkout e mensagem no e-mail de teste do público %s",
     async (segment) => {
       mocks.validateStoreOffer.mockResolvedValue({ offer });
@@ -317,7 +317,7 @@ describe("notification server boundary", () => {
       expect(mocks.sendEmailBatch).not.toHaveBeenCalled();
     },
   );
-  it.each(["all", "paid"])(
+  it.each(["all", "paid", "no_orders"])(
     "envia nova oferta opcional validada ao público %s sem reduzir aos pendentes",
     async (segment) => {
       const values = vi.fn().mockReturnValue({
@@ -460,7 +460,7 @@ describe("notification server boundary", () => {
     expect(sent.html).not.toContain("href=");
   });
 
-  it.each(["all", "paid"])(
+  it.each(["all", "paid", "no_orders"])(
     "envia comunicado ao público %s sem exigir pedidos e sem duplicar e-mails",
     async (segment) => {
       const values = vi.fn().mockReturnValue({
@@ -536,6 +536,8 @@ describe("notification server boundary", () => {
     ["all", "send"],
     ["paid", "test"],
     ["paid", "send"],
+    ["no_orders", "test"],
+    ["no_orders", "send"],
   ])(
     "rejeita checkout no público %s antes do provedor (%s)",
     async (segment, mode) => {
@@ -557,7 +559,7 @@ describe("notification server boundary", () => {
     },
   );
 
-  it.each(["all", "paid"])(
+  it.each(["all", "paid", "no_orders"])(
     "gera teste informativo para %s sem dados de pedido",
     async (segment) => {
       mocks.sendEmail.mockResolvedValue({ ok: true, externalId: "test-id" });

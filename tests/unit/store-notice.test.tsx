@@ -7,11 +7,26 @@ import {
   buildStoreNoticeContent,
   buildStoreNoticeHtml,
   getStoreNoticeValidationError,
+  isStoreNoticeSegment,
 } from "@/features/emails/store-notice";
 
 afterEach(cleanup);
 
 describe("comunicado informativo para todos", () => {
+  it.each(["all", "paid", "imported_paid", "imported_pending", "no_orders"] as const)(
+    "trata %s como comunicado sem pedido real, nunca com botão de checkout",
+    (segment) => {
+      expect(isStoreNoticeSegment(segment)).toBe(true);
+    },
+  );
+
+  it.each(["pending", "refused", "custom"] as const)(
+    "mantém %s fora do comunicado — só ele pode usar o checkout do pedido real",
+    (segment) => {
+      expect(isStoreNoticeSegment(segment)).toBe(false);
+    },
+  );
+
   it.each([
     "Milluni Shopping",
     "Atendimento da minha loja",
@@ -174,7 +189,7 @@ describe("comunicado informativo para todos", () => {
     ).not.toBeNull();
   });
 
-  it.each(["all", "paid"] as const)(
+  it.each(["all", "paid", "no_orders"] as const)(
     "exibe um editor de %s sem checkout e envia o corpo correto no formulário",
     (audience) => {
       function Harness() {
