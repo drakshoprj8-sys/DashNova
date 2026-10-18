@@ -55,6 +55,13 @@ import {
   getStoreNoticeOfferValidationError,
 } from "./store-notice-offer";
 import { OFFER_BUTTONS, type StoreOffer } from "./store-offer";
+import {
+  TRACKING_BUTTON_LABEL,
+  TRACKING_PREVIEW_URL,
+  buildStoreNoticeTrackingContent,
+  buildStoreNoticeTrackingHtml,
+  getStoreNoticeTrackingValidationError,
+} from "./store-notice-tracking";
 import { isCanonicalOrderNotification } from "./notification-policy";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
@@ -200,19 +207,23 @@ export function CampaignForm({
           : { ...ORDER_UPDATE_PREFERENCES },
     );
   const [offerUrl, setOfferUrl] = React.useState("");
+  const [includeTracking, setIncludeTracking] = React.useState(false);
+  const tracking = informational && includeTracking;
   const [offer, setOffer] = React.useState<StoreOffer | null>(null);
   const [offerButton, setOfferButton] = React.useState<string>(
     OFFER_BUTTONS[0],
   );
-  const hasOffer = informational && Boolean(offer);
+  const hasOffer = informational && !tracking && Boolean(offer);
   const notificationContent = informational
-    ? hasOffer
-      ? buildStoreNoticeOfferContent(
-          notificationPreferences,
-          offer!,
-          offerButton,
-        )
-      : buildStoreNoticeContent(notificationPreferences)
+    ? tracking
+      ? buildStoreNoticeTrackingContent(notificationPreferences)
+      : hasOffer
+        ? buildStoreNoticeOfferContent(
+            notificationPreferences,
+            offer!,
+            offerButton,
+          )
+        : buildStoreNoticeContent(notificationPreferences)
     : {
         ...buildNotificationContent(notificationPreferences),
         ctaUrl:
@@ -231,9 +242,12 @@ export function CampaignForm({
     fallbackText,
   } = notificationContent;
   const notificationReady = informational
-    ? hasOffer
-      ? getStoreNoticeOfferValidationError(notificationContent, offer!) === null
-      : getStoreNoticeValidationError(notificationContent) === null
+    ? tracking
+      ? getStoreNoticeTrackingValidationError(notificationContent) === null
+      : hasOffer
+        ? getStoreNoticeOfferValidationError(notificationContent, offer!) ===
+          null
+        : getStoreNoticeValidationError(notificationContent) === null
     : isCanonicalOrderNotification(notificationContent, isCheckoutCampaign);
   const [previewRecipientId, setPreviewRecipientId] = React.useState(
     pendingRecipients[0]?.id ?? "",
@@ -375,11 +389,24 @@ export function CampaignForm({
     ctaLabel,
     ctaUrl: "{{CHECKOUT_URL}}",
     fallbackText,
-    vars: previewVars,
+    vars: tracking
+      ? {
+          ...previewVars,
+          pedido: "Exemplo de pedido",
+          produto: "Artigo de exemplo",
+          status: "Demonstração",
+          valor: "",
+          checkoutUrl: TRACKING_PREVIEW_URL,
+        }
+      : previewVars,
   };
-  const previewHtml = hasOffer
-    ? buildStoreNoticeOfferHtml(previewInput, offer!)
-    : (informational ? buildStoreNoticeHtml : buildCampaignHtml)(previewInput);
+  const previewHtml = tracking
+    ? buildStoreNoticeTrackingHtml(previewInput)
+    : hasOffer
+      ? buildStoreNoticeOfferHtml(previewInput, offer!)
+      : (informational ? buildStoreNoticeHtml : buildCampaignHtml)(
+          previewInput,
+        );
 
   function chooseSegment(next: SegmentKey) {
     const nextCheckout =
@@ -392,7 +419,9 @@ export function CampaignForm({
     setCustomNoticeMode(nextNotice);
     setCustomCheckoutMode(nextCheckout);
     if (!nextCheckout) setRequestedCheckoutUrl("");
+    if (next === "no_orders") setIncludeTracking(false);
     if (!nextNotice) {
+      setIncludeTracking(false);
       // O botão de oferta só existe nos comunicados; some se o público muda.
       setOfferUrl("");
       setOffer(null);
@@ -490,7 +519,13 @@ export function CampaignForm({
             <input
               type="hidden"
               name="campaignKind"
-              value={hasOffer ? "notice-offer" : "notice"}
+              value={
+                tracking
+                  ? "order-tracking"
+                  : hasOffer
+                    ? "notice-offer"
+                    : "notice"
+              }
             />
             <input
               type="hidden"
@@ -1116,6 +1151,18 @@ export function CampaignForm({
                   onOfferUrlChange={setOfferUrl}
                   onOfferChange={setOffer}
                   onOfferButtonChange={setOfferButton}
+                  tracking={tracking}
+                  onTrackingChange={(enabled) => {
+                    setIncludeTracking(enabled);
+                    if (enabled) {
+                      setOfferUrl("");
+                      setOffer(null);
+                      setNotificationPreferences((current) => ({
+                        ...current,
+                        ctaLabel: TRACKING_BUTTON_LABEL,
+                      }));
+                    }
+                  }}
                 />
               ) : (
                 <NotificationEditor
@@ -1219,8 +1266,15 @@ export function CampaignForm({
                 }
                 onClick={() => setSubmittingMode("send")}
               >
-                <Send /> Enviar para {formatCount(total)}{" "}
-                {total === 1 ? "cliente" : "clientes"}
+                <Send />{" "}
+                {tracking ? (
+                  "Enviar acompanhamento para pedidos verificados"
+                ) : (
+                  <>
+                    Enviar para {formatCount(total)}{" "}
+                    {total === 1 ? "cliente" : "clientes"}
+                  </>
+                )}
               </Button>
             </div>
           </form>

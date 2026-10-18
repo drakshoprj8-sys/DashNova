@@ -84,6 +84,12 @@ vi.mock("@/lib/workspace", () => ({
 }));
 
 import { sendCampaignAction } from "@/features/emails/actions";
+import {
+  buildStoreNoticeTrackingContent,
+  TRACKING_BUTTON_LABEL,
+  STORE_NOTICE_TRACKING_KIND,
+} from "@/features/emails/store-notice-tracking";
+import { verifyTrackingToken } from "@/features/orders/tracking-link";
 
 function form(changes: Record<string, string> = {}) {
   const data = new FormData();
@@ -102,7 +108,146 @@ describe("notification server boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("RESEND_FROM_EMAIL", "notificacoes@encomendapgcvip.site");
+    vi.stubEnv("ENCRYPTION_KEY", "a".repeat(64));
   });
+
+  it("gera um link distinto e assinado por cliente só após confirmar o pedido associado", async () => {
+    const customerA = "10000000-0000-4000-8000-000000000001";
+    const customerB = "10000000-0000-4000-8000-000000000002";
+    const orderA = "20000000-0000-4000-8000-000000000001";
+    const orderB = "20000000-0000-4000-8000-000000000002";
+    const rows = [
+      {
+        customerId: customerA,
+        orderId: orderA,
+        reference: "PED-A",
+        productName: "Livro A",
+        totalCents: 1000,
+        currency: "EUR",
+        status: "paid",
+      },
+      {
+        customerId: customerB,
+        orderId: orderB,
+        reference: "PED-B",
+        productName: "Livro B",
+        totalCents: 2000,
+        currency: "EUR",
+        status: "shipped",
+      },
+    ];
+    const selection: Record<string, unknown> = {};
+    selection.from = () => selection;
+    selection.innerJoin = () => selection;
+    selection.where = async () => rows;
+    const values = vi.fn().mockReturnValue({
+      onConflictDoNothing: () => ({
+        returning: async () => [{ id: "campaign" }],
+      }),
+      onConflictDoUpdate: async () => undefined,
+    });
+    mocks.getDb.mockReturnValue({
+      selectDistinct: () => selection,
+      insert: () => ({ values }),
+      update: () => ({ set: () => ({ where: async () => undefined }) }),
+    });
+    mocks.getSegmentRecipients.mockResolvedValue([
+      {
+        id: customerA,
+        name: "Ana",
+        email: "ana@example.com",
+        orderId: orderA,
+        checkoutUrl: "https://example.com/pagar/taxa",
+      },
+      { id: customerB, name: "Bia", email: "bia@example.com", orderId: orderB },
+      {
+        id: "other",
+        name: "Outra pessoa",
+        email: "other@example.com",
+        orderId: orderA,
+      },
+      {
+        id: "imported",
+        name: "Importado",
+        email: "imported@example.com",
+        orderId: null,
+      },
+      {
+        id: "unverified",
+        name: "Não verificado",
+        email: "unverified@example.com",
+        orderId: "20000000-0000-4000-8000-000000000003",
+      },
+    ]);
+    mocks.sendEmailBatch.mockResolvedValue({
+      ok: true,
+      externalIds: ["a", "b"],
+    });
+    const content = buildStoreNoticeTrackingContent({
+      ...STORE_NOTICE_PREFERENCES,
+      ctaLabel: TRACKING_BUTTON_LABEL,
+    });
+    const result = await sendCampaignAction(
+      null,
+      form({ ...content, segment: "all", campaignKind: "order-tracking" }),
+    );
+    expect(result).toMatchObject({ ok: true, total: 2 });
+    expect(mocks.getSegmentRecipients).toHaveBeenCalledWith("all", true);
+    const emails = mocks.sendEmailBatch.mock.calls[0][0];
+    for (const [index, email] of emails.entries()) {
+      const address = email.html.match(
+        /href="(https:\/\/example.com\/acompanhar\/[^"&]+)"/,
+      )?.[1];
+      expect(address).toBeTruthy();
+      const claim = verifyTrackingToken(
+        new URL(address).pathname.split("/").pop()!,
+      );
+      expect(claim).toMatchObject({
+        orderId: rows[index].orderId,
+        customerId: rows[index].customerId,
+      });
+      expect(email.html).not.toContain("/pagar/");
+      expect(email.html).not.toContain("/checkout/");
+      expect(email.html).not.toContain("pedido.example.invalid");
+    }
+    expect(values.mock.calls[0][0].content.notificationKind).toBe(
+      STORE_NOTICE_TRACKING_KIND,
+    );
+  });
+
+  it.each(["test", "send"])(
+    "recusa checkout ou endereço manual no acompanhamento antes de contactar o provedor (%s)",
+    async (mode) => {
+      const content = buildStoreNoticeTrackingContent({
+        ...STORE_NOTICE_PREFERENCES,
+        ctaLabel: TRACKING_BUTTON_LABEL,
+      });
+      const invalidChanges: Record<string, string>[] = [
+        { ctaUrl: "https://example.com/pagar/taxa" },
+        { checkoutMode: "checkout" },
+        { offerUrl: "https://example.com/checkout/item" },
+        { segment: "no_orders" },
+        { segment: "pending" },
+      ];
+      for (const changes of invalidChanges) {
+        const result = await sendCampaignAction(
+          null,
+          form({
+            ...content,
+            segment: "all",
+            campaignKind: "order-tracking",
+            mode,
+            testEmail: "admin@example.com",
+            ...changes,
+          }),
+        );
+        expect(result.ok).toBe(false);
+      }
+      expect(mocks.getDb).not.toHaveBeenCalled();
+      expect(mocks.sendEmail).not.toHaveBeenCalled();
+      expect(mocks.sendEmailBatch).not.toHaveBeenCalled();
+    },
+  );
 
   const offer = {
     storeName: "Minha marca",

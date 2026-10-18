@@ -85,7 +85,8 @@ export function getOrderNotificationValidationError(
         normalized !== normalized.trim() ||
         !/^[\p{L}\p{N} .,!?—-]+$/u.test(normalized) ||
         !/(?:pedido|encomenda|compra)/i.test(normalized) ||
-        disallowedCustomText.test(normalized)
+        disallowedCustomText.test(normalized) ||
+        /\b(?:correios|ctt|worten)\b/i.test(normalized)
       ) {
         return "Texto do botão: use até 60 caracteres sobre ver ou acompanhar o pedido, sem cobranças ou links.";
       }

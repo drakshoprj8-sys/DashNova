@@ -12,6 +12,11 @@ import { getAppUrl } from "@/lib/app-url";
 import { getOrCreateDefaultWorkspace } from "@/lib/workspace";
 import { STORE_NOTICE_KIND, buildStoreNoticeHtml } from "./store-notice";
 import {
+  STORE_NOTICE_TRACKING_KIND,
+  TRACKING_PREVIEW_URL,
+  buildStoreNoticeTrackingHtml,
+} from "./store-notice-tracking";
+import {
   SENT_STATUSES,
   DELIVERED_STATUSES,
   AWAITING_DELIVERY_STATUSES,
@@ -186,16 +191,19 @@ export async function getEmailDashboardOverview(): Promise<EmailDashboardOvervie
         isStoreOffer(saved?.offer)
           ? saved.offer
           : null;
-      const renderHtml = offer
-        ? (input: Parameters<typeof buildCampaignHtml>[0]) =>
-            noticeOffer
-              ? buildStoreNoticeOfferHtml(input, offer)
-              : buildStoreOfferHtml(offer, input.vars, content.ctaLabel)
-        : saved?.notificationKind === STORE_NOTICE_LINK_KIND
-          ? buildStoreNoticeLinkHtml
-          : informational
-            ? buildStoreNoticeHtml
-            : buildCampaignHtml;
+      const tracking = saved?.notificationKind === STORE_NOTICE_TRACKING_KIND;
+      const renderHtml = tracking
+        ? buildStoreNoticeTrackingHtml
+        : offer
+          ? (input: Parameters<typeof buildCampaignHtml>[0]) =>
+              noticeOffer
+                ? buildStoreNoticeOfferHtml(input, offer)
+                : buildStoreOfferHtml(offer, input.vars, content.ctaLabel)
+          : saved?.notificationKind === STORE_NOTICE_LINK_KIND
+            ? buildStoreNoticeLinkHtml
+            : informational
+              ? buildStoreNoticeHtml
+              : buildCampaignHtml;
       return {
         id: row.id,
         name: row.name,
@@ -212,7 +220,9 @@ export async function getEmailDashboardOverview(): Promise<EmailDashboardOvervie
           ctaUrl: content.ctaUrl ?? DEFAULT_CAMPAIGN_TEMPLATE.ctaUrl,
           fallbackText:
             content.fallbackText ?? DEFAULT_CAMPAIGN_TEMPLATE.fallbackText,
-          vars: previewVars(appUrl),
+          vars: tracking
+            ? { ...previewVars(appUrl), checkoutUrl: TRACKING_PREVIEW_URL }
+            : previewVars(appUrl),
         }),
         status: row.status,
         createdAt: row.createdAt.toISOString(),

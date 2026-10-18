@@ -70,6 +70,11 @@ import {
 } from "./store-offer";
 import { validateStoreOfferAction } from "./store-offer-actions";
 import {
+  STORE_NOTICE_TRACKING_KIND,
+  buildStoreNoticeTrackingHtml,
+  getStoreNoticeTrackingValidationError,
+} from "./store-notice-tracking";
+import {
   STORE_NOTICE_OFFER_KIND,
   buildStoreNoticeOfferHtml,
   getStoreNoticeOfferValidationError,
@@ -81,7 +86,7 @@ const campaignSchema = z.object({
   dispatchId: z.string().uuid(),
   campaignName: z.string().trim().max(120).default(""),
   campaignKind: z
-    .enum(["notice", "offer", "notice-offer", "notice-link"])
+    .enum(["notice", "offer", "notice-offer", "notice-link", "order-tracking"])
     .default("notice"),
   offerUrl: z.string().trim().max(2048).default(""),
   segment: z.enum([
@@ -144,7 +149,7 @@ async function resolveRecipients(
             pendingCheckout ? ["awaiting_payment"] : undefined,
           )
         ).recipients
-      : await getSegmentRecipients(segment, !isStoreNoticeSegment(segment));
+      : await getSegmentRecipients(segment, !informational);
 
   const unique = new Map<string, Recipient>();
   for (const recipient of recipients) {
@@ -489,9 +494,21 @@ export async function sendCampaignAction(
     parsed.data.segment === "pending" ||
     (parsed.data.segment === "custom" &&
       parsed.data.checkoutMode === "checkout");
-  const informational =
+  const tracking = parsed.data.campaignKind === "order-tracking";
+  const noticeAudience =
     isStoreNoticeSegment(parsed.data.segment) ||
     (parsed.data.segment === "custom" && parsed.data.checkoutMode === "notice");
+  const informational = noticeAudience && !tracking;
+  if (
+    tracking &&
+    (!noticeAudience || pendingCheckout || parsed.data.segment === "no_orders")
+  ) {
+    return {
+      ok: false,
+      error:
+        "Selecione um público de clientes para acompanhar pedidos aprovados, sem checkout de pagamento.",
+    };
+  }
   let offer: StoreOffer | null = null;
   const noticeOffer = parsed.data.campaignKind === "notice-offer";
   // Older forms and direct requests must not restore arbitrary-link campaigns.
@@ -536,11 +553,13 @@ export async function sendCampaignAction(
       }
     }
   }
-  const validationError = offer
-    ? null
-    : informational
-      ? getStoreNoticeValidationError(parsed.data)
-      : getOrderNotificationValidationError(parsed.data, pendingCheckout);
+  const validationError = tracking
+    ? getStoreNoticeTrackingValidationError(parsed.data)
+    : offer
+      ? null
+      : informational
+        ? getStoreNoticeValidationError(parsed.data)
+        : getOrderNotificationValidationError(parsed.data, pendingCheckout);
   if (validationError) {
     return {
       ok: false,
@@ -584,14 +603,16 @@ export async function sendCampaignAction(
   } = parsed.data;
   const appUrl = getAppUrl();
   const validatedOffer = offer;
-  const renderHtml = validatedOffer
-    ? (input: Parameters<typeof buildCampaignHtml>[0]) =>
-        noticeOffer
-          ? buildStoreNoticeOfferHtml(input, validatedOffer)
-          : buildStoreOfferHtml(validatedOffer, input.vars, ctaLabel)
-    : informational
-      ? buildStoreNoticeHtml
-      : buildCampaignHtml;
+  const renderHtml = tracking
+    ? buildStoreNoticeTrackingHtml
+    : validatedOffer
+      ? (input: Parameters<typeof buildCampaignHtml>[0]) =>
+          noticeOffer
+            ? buildStoreNoticeOfferHtml(input, validatedOffer)
+            : buildStoreOfferHtml(validatedOffer, input.vars, ctaLabel)
+      : informational
+        ? buildStoreNoticeHtml
+        : buildCampaignHtml;
 
   if (mode === "test") {
     if (!testEmail) {
@@ -645,7 +666,7 @@ export async function sendCampaignAction(
   const eligibility = await inspectCampaignEligibility(
     workspaceId,
     resolvedRecipients,
-    informational,
+    informational || tracking,
   );
   const eligible = eligibility.recipients;
   let recipients = eligible;
@@ -700,13 +721,15 @@ export async function sendCampaignAction(
         ? company.email
         : null,
       content: {
-        notificationKind: noticeOffer
-          ? STORE_NOTICE_OFFER_KIND
-          : offer
-            ? STORE_OFFER_KIND
-            : informational
-              ? STORE_NOTICE_KIND
-              : "pccgvip-order-v1",
+        notificationKind: tracking
+          ? STORE_NOTICE_TRACKING_KIND
+          : noticeOffer
+            ? STORE_NOTICE_OFFER_KIND
+            : offer
+              ? STORE_OFFER_KIND
+              : informational
+                ? STORE_NOTICE_KIND
+                : "pccgvip-order-v1",
         ...(offer ? { offer } : {}),
         body,
         headerText: headerName,

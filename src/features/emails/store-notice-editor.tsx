@@ -17,6 +17,10 @@ import {
 } from "./store-notice-offer";
 import { StoreOfferEditor } from "./store-offer-editor";
 import { OFFER_BUTTONS, type StoreOffer } from "./store-offer";
+import {
+  buildStoreNoticeTrackingContent,
+  getStoreNoticeTrackingValidationError,
+} from "./store-notice-tracking";
 
 export function StoreNoticeEditor({
   value,
@@ -29,6 +33,8 @@ export function StoreNoticeEditor({
   onOfferUrlChange,
   onOfferChange,
   onOfferButtonChange,
+  tracking = false,
+  onTrackingChange,
 }: {
   value: NotificationPreferences;
   onChange: (value: NotificationPreferences) => void;
@@ -47,14 +53,20 @@ export function StoreNoticeEditor({
   onOfferUrlChange?: (url: string) => void;
   onOfferChange?: (offer: StoreOffer | null) => void;
   onOfferButtonChange?: (button: string) => void;
+  tracking?: boolean;
+  onTrackingChange?: (enabled: boolean) => void;
 }) {
-  const hasOffer = Boolean(offer);
-  const content = hasOffer
-    ? buildStoreNoticeOfferContent(value, offer!, offerButton)
-    : buildStoreNoticeContent(value);
-  const error = hasOffer
-    ? getStoreNoticeOfferValidationError(content, offer!)
-    : getStoreNoticeValidationError(content);
+  const hasOffer = !tracking && Boolean(offer);
+  const content = tracking
+    ? buildStoreNoticeTrackingContent(value)
+    : hasOffer
+      ? buildStoreNoticeOfferContent(value, offer!, offerButton)
+      : buildStoreNoticeContent(value);
+  const error = tracking
+    ? getStoreNoticeTrackingValidationError(content)
+    : hasOffer
+      ? getStoreNoticeOfferValidationError(content, offer!)
+      : getStoreNoticeValidationError(content);
   return (
     <div className="min-w-0 space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -89,9 +101,11 @@ export function StoreNoticeEditor({
           : audience === "no_orders"
             ? "Envie informações da PCCGVIP a quem está cadastrado mas ainda não fez nenhum pedido."
             : "Envie informações da PCCGVIP aos contatos elegíveis da aba Clientes, incluindo quem não tem pedido."}{" "}
-        {hasOffer
-          ? "O botão abaixo leva ao checkout de produto verificado que você colou; não há cobrança de pedidos anteriores."
-          : "O comunicado é enviado sem botão ou link de pagamento."}{" "}
+        {tracking
+          ? "O botão acompanha o pedido confirmado de cada cliente, sem solicitar pagamento. Clientes sem pedido verificado são excluídos desse envio."
+          : hasOffer
+            ? "O botão abaixo leva ao checkout de produto verificado que você colou; não há cobrança de pedidos anteriores."
+            : "O comunicado é enviado sem botão ou link de pagamento."}{" "}
         Bloqueados e descadastrados ficam excluídos.
       </p>
       {(
@@ -152,7 +166,61 @@ export function StoreNoticeEditor({
           apoio na prévia.
         </p>
       </div>
-      {onOfferUrlChange ? (
+      {onTrackingChange ? (
+        <div className="space-y-3 rounded-md border p-3">
+          <label
+            className="flex items-center gap-2 text-sm font-medium"
+            htmlFor="includeOrderTracking"
+          >
+            <input
+              id="includeOrderTracking"
+              type="checkbox"
+              className="accent-primary size-4"
+              checked={tracking}
+              disabled={audience === "no_orders"}
+              onChange={(event) => onTrackingChange(event.target.checked)}
+              aria-describedby="orderTrackingHelp"
+            />
+            Incluir botão de acompanhamento do pedido
+          </label>
+          <p id="orderTrackingHelp" className="text-muted-foreground text-xs">
+            {audience === "no_orders" ? (
+              "Este público ainda não tem pedidos para acompanhar. Selecione clientes com uma compra confirmada."
+            ) : (
+              <>
+                Cada destinatário recebe um endereço individual para o seu
+                pedido aprovado. A prévia usa um endereço demonstrativo. Este
+                botão não solicita pagamento.
+              </>
+            )}
+          </p>
+          {tracking ? (
+            <div className="space-y-2">
+              <Label htmlFor="trackingButtonLabel">
+                Texto do botão de acompanhamento
+              </Label>
+              <Input
+                id="trackingButtonLabel"
+                value={value.ctaLabel}
+                maxLength={60}
+                onChange={(event) =>
+                  onChange({ ...value, ctaLabel: event.target.value })
+                }
+                aria-invalid={error?.startsWith("Texto do botão:") || undefined}
+                aria-describedby="trackingButtonHelp"
+              />
+              <p
+                id="trackingButtonHelp"
+                className="text-muted-foreground text-xs"
+              >
+                Use um texto sobre consultar o pedido, como “Ver o meu pedido”
+                ou “Acompanhar encomenda”.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {!tracking && onOfferUrlChange ? (
         <div className="space-y-4 border-t pt-4">
           <StoreOfferEditor
             embedded
