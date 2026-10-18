@@ -49,6 +49,12 @@ import {
   getStoreNoticeValidationError,
   isStoreNoticeSegment,
 } from "./store-notice";
+import {
+  buildStoreNoticeOfferContent,
+  buildStoreNoticeOfferHtml,
+  getStoreNoticeOfferValidationError,
+} from "./store-notice-offer";
+import { OFFER_BUTTONS, type StoreOffer } from "./store-offer";
 import { isCanonicalOrderNotification } from "./notification-policy";
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
@@ -193,8 +199,20 @@ export function CampaignForm({
           ? { ...RECOVERY_PREFERENCES }
           : { ...ORDER_UPDATE_PREFERENCES },
     );
+  const [offerUrl, setOfferUrl] = React.useState("");
+  const [offer, setOffer] = React.useState<StoreOffer | null>(null);
+  const [offerButton, setOfferButton] = React.useState<string>(
+    OFFER_BUTTONS[0],
+  );
+  const hasOffer = informational && Boolean(offer);
   const notificationContent = informational
-    ? buildStoreNoticeContent(notificationPreferences)
+    ? hasOffer
+      ? buildStoreNoticeOfferContent(
+          notificationPreferences,
+          offer!,
+          offerButton,
+        )
+      : buildStoreNoticeContent(notificationPreferences)
     : {
         ...buildNotificationContent(notificationPreferences),
         ctaUrl:
@@ -213,7 +231,9 @@ export function CampaignForm({
     fallbackText,
   } = notificationContent;
   const notificationReady = informational
-    ? getStoreNoticeValidationError(notificationContent) === null
+    ? hasOffer
+      ? getStoreNoticeOfferValidationError(notificationContent, offer!) === null
+      : getStoreNoticeValidationError(notificationContent) === null
     : isCanonicalOrderNotification(notificationContent, isCheckoutCampaign);
   const [previewRecipientId, setPreviewRecipientId] = React.useState(
     pendingRecipients[0]?.id ?? "",
@@ -357,9 +377,9 @@ export function CampaignForm({
     fallbackText,
     vars: previewVars,
   };
-  const previewHtml = (
-    informational ? buildStoreNoticeHtml : buildCampaignHtml
-  )(previewInput);
+  const previewHtml = hasOffer
+    ? buildStoreNoticeOfferHtml(previewInput, offer!)
+    : (informational ? buildStoreNoticeHtml : buildCampaignHtml)(previewInput);
 
   function chooseSegment(next: SegmentKey) {
     const nextCheckout =
@@ -372,6 +392,11 @@ export function CampaignForm({
     setCustomNoticeMode(nextNotice);
     setCustomCheckoutMode(nextCheckout);
     if (!nextCheckout) setRequestedCheckoutUrl("");
+    if (!nextNotice) {
+      // O botão de oferta só existe nos comunicados; some se o público muda.
+      setOfferUrl("");
+      setOffer(null);
+    }
     setNotificationPreferences((current) =>
       nextNotice
         ? informational
@@ -396,6 +421,9 @@ export function CampaignForm({
     setCustomNoticeMode(false);
     setCustomCheckoutMode(checkout);
     if (!checkout) setRequestedCheckoutUrl("");
+    // O botão de oferta só existe nos comunicados; some se o destino muda.
+    setOfferUrl("");
+    setOffer(null);
     setNotificationPreferences((current) => ({
       ...current,
       ctaLabel: [
@@ -459,7 +487,11 @@ export function CampaignForm({
           <form action={formAction} className="space-y-5">
             <input type="hidden" name="dispatchId" value={dispatchId} />
             <input type="hidden" name="segment" value={segment} />
-            <input type="hidden" name="campaignKind" value="notice" />
+            <input
+              type="hidden"
+              name="campaignKind"
+              value={hasOffer ? "notice-offer" : "notice"}
+            />
             <input
               type="hidden"
               name="checkoutMode"
@@ -1077,6 +1109,12 @@ export function CampaignForm({
                   hideSubject
                   value={notificationPreferences}
                   onChange={setNotificationPreferences}
+                  offerUrl={offerUrl}
+                  offer={offer}
+                  offerButton={offerButton}
+                  onOfferUrlChange={setOfferUrl}
+                  onOfferChange={setOffer}
+                  onOfferButtonChange={setOfferButton}
                 />
               ) : (
                 <NotificationEditor

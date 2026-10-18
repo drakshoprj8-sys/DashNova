@@ -11,20 +11,44 @@ import {
   buildStoreNoticeContent,
   getStoreNoticeValidationError,
 } from "./store-notice";
+import {
+  buildStoreNoticeOfferContent,
+  getStoreNoticeOfferValidationError,
+} from "./store-notice-offer";
+import { StoreOfferEditor } from "./store-offer-editor";
+import { OFFER_BUTTONS, type StoreOffer } from "./store-offer";
 
 export function StoreNoticeEditor({
   value,
   onChange,
   audience = "all",
   hideSubject = false,
+  offerUrl = "",
+  offer = null,
+  offerButton = OFFER_BUTTONS[0],
+  onOfferUrlChange,
+  onOfferChange,
+  onOfferButtonChange,
 }: {
   value: NotificationPreferences;
   onChange: (value: NotificationPreferences) => void;
   audience?: "all" | "paid" | "imported_paid" | "imported_pending" | "custom";
   hideSubject?: boolean;
+  /** Botão vermelho opcional: link do checkout de um produto da própria loja. */
+  offerUrl?: string;
+  offer?: StoreOffer | null;
+  offerButton?: string;
+  onOfferUrlChange?: (url: string) => void;
+  onOfferChange?: (offer: StoreOffer | null) => void;
+  onOfferButtonChange?: (button: string) => void;
 }) {
-  const content = buildStoreNoticeContent(value);
-  const error = getStoreNoticeValidationError(content);
+  const hasOffer = Boolean(offer);
+  const content = hasOffer
+    ? buildStoreNoticeOfferContent(value, offer!, offerButton)
+    : buildStoreNoticeContent(value);
+  const error = hasOffer
+    ? getStoreNoticeOfferValidationError(content, offer!)
+    : getStoreNoticeValidationError(content);
   return (
     <div className="min-w-0 space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -55,8 +79,10 @@ export function StoreNoticeEditor({
         {audience === "paid" || audience === "imported_paid"
           ? "Envie informações da PCCGVIP aos clientes classificados como pagos na aba Clientes, incluindo os importados."
           : "Envie informações da PCCGVIP aos contatos elegíveis da aba Clientes, incluindo quem não tem pedido."}{" "}
-        O comunicado é enviado sem botão ou link de pagamento. Bloqueados e
-        descadastrados ficam excluídos.
+        {hasOffer
+          ? "O botão abaixo leva ao checkout de produto verificado que você colou; não há cobrança de pedidos anteriores."
+          : "O comunicado é enviado sem botão ou link de pagamento."}{" "}
+        Bloqueados e descadastrados ficam excluídos.
       </p>
       {(
         [
@@ -116,6 +142,19 @@ export function StoreNoticeEditor({
           apoio na prévia.
         </p>
       </div>
+      {onOfferUrlChange ? (
+        <div className="space-y-4 border-t pt-4">
+          <StoreOfferEditor
+            embedded
+            url={offerUrl}
+            offer={offer}
+            button={offerButton}
+            onUrl={onOfferUrlChange}
+            onOffer={(next) => onOfferChange?.(next)}
+            onButton={(next) => onOfferButtonChange?.(next)}
+          />
+        </div>
+      ) : null}
       <div
         className="flex flex-wrap gap-1.5"
         aria-label="Variáveis do comunicado"
