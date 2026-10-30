@@ -31,7 +31,7 @@ npm run dev                  # http://localhost:3000
 
 Para explorar o painel sem Supabase, deixe as variáveis do Supabase vazias e
 defina `ALLOW_DEMO_MODE=true` em `.env.local`. O painel abre com banner
-permanente e dados fictícios rotulados (`src/lib/demo-data.ts`).
+permanente e dados fictícios rotulados (`src/features/dashboard/demo-snapshot.ts`).
 
 Sem essa flag — e **sempre em produção** — o painel exige login. Nada finge
 estar conectado: integrações sem credenciais aparecem como "Desconectado".
